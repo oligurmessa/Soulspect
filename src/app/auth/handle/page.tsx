@@ -200,7 +200,7 @@ function AuthActionHandler() {
             </h2>
             <p className="text-green-600 mb-4">{message}</p>
             <div className="text-sm text-brand-black/60">
-              If you're not redirected automatically, 
+              If you are not redirected automatically, 
               <button 
                 onClick={() => router.push('/dashboard')}
                 className="text-brand-black hover:underline ml-1"

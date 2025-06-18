@@ -82,7 +82,7 @@ const DashboardPage = () => {
                 Welcome to Your Dashboard
               </h2>
               <p className="text-brand-black/60 max-w-2xl mx-auto">
-                You're now logged into soulspect! This is where you'll track your emotions, 
+                You are now logged into soulspect! This is where you will track your emotions, 
                 reflect on your thoughts, and discover insights about your personal growth journey.
               </p>
               {user?.emailVerified === false && (
@@ -190,7 +190,7 @@ const DashboardPage = () => {
                 🚧 Development Status
               </h3>
               <p className="text-brand-black/60 text-sm mb-4">
-                You're experiencing the early access version of soulspect. 
+                You are experiencing the early access version of soulspect. 
                 New features are being added regularly.
               </p>
               <div className="text-xs text-brand-black/50">
