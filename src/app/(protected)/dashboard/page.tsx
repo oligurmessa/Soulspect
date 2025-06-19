@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -44,29 +45,29 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-white to-gray-100">
-      {/* Header */}
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-brand-black">soulspect</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-brand-black/60">
-                Welcome, {user?.displayName || user?.email?.split('@')[0]}
+        {/* Header */}
+        <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex h-16 items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Image src="/logo.png" alt="Soulspect Logo" width={42} height={42} unoptimized/>
+                <h1 className="text-2xl font-bold text-brand-black">soulspect</h1>
               </div>
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoggingOut ? 'Signing out...' : 'Sign Out'}
-              </button>
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-brand-black/60">
+                  Welcome, {user?.displayName || user?.email?.split('@')[0]}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
-
+        </header>
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <motion.div
