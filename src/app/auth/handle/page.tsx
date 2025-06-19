@@ -192,9 +192,13 @@ function AuthActionHandler() {
       case 'success':
         return (
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-              <span className="text-3xl">✅</span>
-            </div>
+
+          <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-green-600 text-3xl">
+              check_circle
+            </span>
+          </div>
+
             <h2 className="text-xl font-semibold text-brand-black mb-2">
               Success!
             </h2>
@@ -214,9 +218,15 @@ function AuthActionHandler() {
       case 'error':
         return (
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-              <span className="text-3xl">❌</span>
+            <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+              <span
+                className="material-symbols-outlined text-red-600"
+                style={{ fontSize: '2.5rem', lineHeight: 1 }}
+              >
+                cancel
+              </span>
             </div>
+
             <h2 className="text-xl font-semibold text-brand-black mb-2">
               Something went wrong
             </h2>

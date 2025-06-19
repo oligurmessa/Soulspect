@@ -51,6 +51,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+        />
+        <style>{`
+          .material-symbols-outlined {
+            font-variation-settings:
+              'FILL' 0,
+              'wght' 400,
+              'GRAD' 0,
+              'opsz' 24;
+            font-size: 1rem;
+            vertical-align: middle;
+          }
+        `}</style>
+      </head>
       <body className={`${inter.className} bg-brand-white antialiased`}>
         <AuthProvider>
           {children}

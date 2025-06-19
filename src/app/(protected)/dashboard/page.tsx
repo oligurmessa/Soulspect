@@ -86,11 +86,14 @@ const DashboardPage = () => {
                 reflect on your thoughts, and discover insights about your personal growth journey.
               </p>
               {user?.emailVerified === false && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-yellow-800 text-sm">
-                    📧 Please check your email and verify your account to unlock all features.
-                  </p>
-                </div>
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm flex items-center gap-1">
+                  <span className="material-symbols-outlined text-base">
+                    mark_email_unread
+                  </span>
+                  Please check your email and verify your account to unlock all features.
+                </p>
+              </div>
               )}
             </div>
           </motion.div>
@@ -99,9 +102,16 @@ const DashboardPage = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <motion.div variants={itemVariants} className="card">
               <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl">📝</span>
-                </div>
+              <div className="mx-auto h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
+                <span
+                  className="material-symbols-outlined text-blue-600"
+                  style={{ fontSize: '2.5rem', lineHeight: 1 }}
+                >
+                  edit_note
+                </span>
+              </div>
+
+
                 <h3 className="text-lg font-semibold text-brand-black mb-2">
                   Emotion Logging
                 </h3>
@@ -116,9 +126,14 @@ const DashboardPage = () => {
 
             <motion.div variants={itemVariants} className="card">
               <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl">🧠</span>
-                </div>
+              <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-green-600 text-2xl"
+                  style={{ fontSize: '2.5rem', lineHeight: 1 }}
+                  >
+                  neurology
+                </span>
+              </div>
+
                 <h3 className="text-lg font-semibold text-brand-black mb-2">
                   AI Insights
                 </h3>
@@ -133,9 +148,14 @@ const DashboardPage = () => {
 
             <motion.div variants={itemVariants} className="card">
               <div className="text-center">
-                <div className="mx-auto h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-                  <span className="text-2xl">📊</span>
+                <div className="mx-auto h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-purple-600"
+                     style={{ fontSize: '2.5rem', lineHeight: 1 }}
+                  >
+                    bar_chart
+                  </span>
                 </div>
+
                 <h3 className="text-lg font-semibold text-brand-black mb-2">
                   Growth Tracking
                 </h3>
@@ -174,21 +194,34 @@ const DashboardPage = () => {
                   }
                 </span>
               </div>
+
               <div className="flex justify-between items-center py-2">
                 <span className="text-brand-black/60">Email Verified:</span>
-                <span className={`font-medium ${user?.emailVerified ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {user?.emailVerified ? '✅ Verified' : '⏳ Pending'}
+                <span className={`font-medium flex items-center gap-1 ${user?.emailVerified ? 'text-green-600' : 'text-yellow-600'}`}>
+                  <span className="material-symbols-outlined">
+                    {user?.emailVerified ? 'check_circle' : 'hourglass_bottom'}
+                  </span>
+                  {user?.emailVerified ? 'Verified' : 'Pending'}
                 </span>
               </div>
+
             </div>
           </motion.div>
 
           {/* Development Status */}
           <motion.div variants={itemVariants} className="card bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
             <div className="text-center">
-              <h3 className="text-lg font-semibold text-brand-black mb-2">
-                🚧 Development Status
+              
+              <h3 className="text-lg font-semibold text-brand-black mb-2 flex items-center gap-2">
+                <span
+                  className="material-symbols-outlined text-grey-500"
+                  style={{ fontSize: '2rem', lineHeight: 1 }}
+                >
+                  construction
+                </span>
+                Development Status
               </h3>
+
               <p className="text-brand-black/60 text-sm mb-4">
                 You are experiencing the early access version of soulspect. 
                 New features are being added regularly.
