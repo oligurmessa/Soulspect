@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from "framer-motion";
 import Link from "next/link";
+import Image from 'next/image';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -57,9 +58,19 @@ export const AnimatedLandingContent = () => {
       animate="visible"
     >
       <motion.div variants={itemVariants}>
-        <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-brand-black mb-2">
-          soulspect
-        </h1>
+        <div className="flex items-center gap-0 mb-1">
+          <Image
+            src="/logo.png"
+            alt="Soulspect Logo"
+            width={148}
+            height={148}  
+            style={{ marginTop: '18px' }}
+            unoptimized
+          />
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-brand-black">
+            soulspect
+          </h1>
+        </div>
       </motion.div>
       
       <motion.div variants={itemVariants}>

@@ -14,7 +14,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
         <p className="text-xs text-brand-black/40">
-          © 2024 soulspect. All rights reserved.
+          © 2025 soulspect. All rights reserved.
         </p>
       </footer>
     </main>
