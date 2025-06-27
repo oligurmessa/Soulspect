@@ -123,24 +123,37 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-white to-gray-100 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse delay-1000" />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative z-10"
       >
         {/* Header */}
         <div className="mb-8 text-center">
           <Link href="/" className="inline-block">
-            <motion.h1 
-              className="text-4xl font-bold text-brand-black hover:text-brand-black/80 transition-colors"
+            <motion.div 
+              className="flex items-center justify-center gap-3 hover:scale-105 transition-transform"
               whileHover={{ scale: 1.05 }}
             >
-              soulspect
-            </motion.h1>
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-xl">
+                  psychology
+                </span>
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                soulspect
+              </h1>
+            </motion.div>
           </Link>
-          <p className="mt-2 text-brand-black/60">
+          <p className="mt-4 text-white/70">
             {showResetForm 
               ? 'Reset your password' 
               : isSignUp 
@@ -152,7 +165,7 @@ const LoginPage = () => {
 
         {/* Main Form Card */}
         <motion.div
-          className="card"
+          className="glass-card"
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -182,7 +195,7 @@ const LoginPage = () => {
           {showResetForm ? (
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div>
-                <label htmlFor="reset-email" className="block text-sm font-medium text-brand-black mb-2">
+                <label htmlFor="reset-email" className="block text-sm font-medium text-white/80 mb-2">
                   Email Address
                 </label>
                 <input
@@ -207,7 +220,7 @@ const LoginPage = () => {
               <button
                 type="button"
                 onClick={() => setShowResetForm(false)}
-                className="w-full text-sm text-brand-black/60 hover:text-brand-black"
+                className="w-full text-sm text-white/60 hover:text-white/80 transition-colors"
               >
                 Back to sign in
               </button>
@@ -217,7 +230,7 @@ const LoginPage = () => {
               {/* Email/Password Form */}
               <form onSubmit={handleEmailAuth} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-brand-black mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-white/80 mb-2">
                     Email Address
                   </label>
                   <input
@@ -232,7 +245,7 @@ const LoginPage = () => {
                 </div>
                 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-brand-black mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-white/80 mb-2">
                     Password
                   </label>
                   <input
@@ -258,16 +271,16 @@ const LoginPage = () => {
 
               {/* Divider */}
               <div className="my-6 flex items-center">
-                <div className="flex-grow border-t border-gray-300"></div>
-                <span className="mx-4 flex-shrink text-sm text-gray-400">OR</span>
-                <div className="flex-grow border-t border-gray-300"></div>
+                <div className="flex-grow border-t border-white/20"></div>
+                <span className="mx-4 flex-shrink text-sm text-white/40">OR</span>
+                <div className="flex-grow border-t border-white/20"></div>
               </div>
 
               {/* Google Sign In */}
               <button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="flex w-full items-center justify-center rounded-lg border-2 border-gray-300 px-4 py-3 font-semibold text-brand-black transition-all hover:border-brand-black hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-black/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="glass-button flex w-full items-center justify-center px-4 py-3 font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -299,7 +312,7 @@ const LoginPage = () => {
                     setError(null);
                     setSuccess(null);
                   }}
-                  className="text-sm text-brand-black/60 hover:text-brand-black transition-colors"
+                  className="text-sm text-white/60 hover:text-white/80 transition-colors"
                 >
                   {isSignUp 
                     ? 'Already have an account? Sign in' 
@@ -314,7 +327,7 @@ const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowResetForm(true)}
-                    className="text-sm text-brand-black/60 hover:text-brand-black transition-colors"
+                    className="text-sm text-white/60 hover:text-white/80 transition-colors"
                   >
                     Forgot your password?
                   </button>
@@ -328,9 +341,12 @@ const LoginPage = () => {
         <div className="mt-6 text-center">
           <Link
             href="/"
-            className="text-sm text-brand-black/60 hover:text-brand-black transition-colors"
+            className="text-sm text-white/60 hover:text-white/80 transition-colors inline-flex items-center gap-2"
           >
-            ← Back to home
+            <span className="material-symbols-outlined text-sm">
+              arrow_back
+            </span>
+            Back to home
           </Link>
         </div>
       </motion.div>

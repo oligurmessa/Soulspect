@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 export default function ProtectedLayout({
   children,
@@ -30,6 +31,10 @@ export default function ProtectedLayout({
     return null;
   }
 
-  // User is authenticated, render the protected content
-  return <>{children}</>;
+  // User is authenticated, render the protected content with dashboard layout
+  return (
+    <DashboardLayout>
+      {children}
+    </DashboardLayout>
+  );
 }

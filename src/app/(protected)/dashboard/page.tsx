@@ -1,35 +1,46 @@
+// when the tabs on the left are clicked while keeping the side panel there we render the clicked tab's content. make sure we maintain the glass morphism effect over all components
 "use client";
 
-import Image from 'next/image';
-import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  // State to hold the current date, set on the client to avoid SSR hydration mismatch.
+  const [currentDate, setCurrentDate] = useState("");
+
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString());
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await logout();
-      router.push("/");
+      router.push("/"); // Redirect to home page after logout
     } catch (error) {
       console.error("Error logging out:", error);
-    } finally {
-      setIsLoggingOut(false);
+      setIsLoggingOut(false); // Re-enable button on error
     }
   };
+  
+  // A safer way to get the user's first name for the greeting.
+  const userFirstName = user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || "there";
 
+  // Animation variants for the container and its children
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
+        staggerChildren: 0.05,
+        delayChildren: 0.1,
       },
     },
   };
@@ -39,202 +50,121 @@ const DashboardPage = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { duration: 0.5 },
+      transition: { duration: 0.3 },
     },
   };
 
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-white to-gray-100">
-        {/* Header */}
-        <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Image src="/logo.png" alt="Soulspect Logo" width={42} height={42} unoptimized/>
-                <h1 className="text-2xl font-bold text-brand-black">soulspect</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-brand-black/60">
-                  Welcome, {user?.displayName || user?.email?.split('@')[0]}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  disabled={isLoggingOut}
-                  className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoggingOut ? 'Signing out...' : 'Sign Out'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-8"
-        >
-          {/* Welcome Section */}
-          <motion.div variants={itemVariants} className="card">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-brand-black mb-4">
-                Welcome to Your Dashboard
-              </h2>
-              <p className="text-brand-black/60 max-w-2xl mx-auto">
-                You are now logged into soulspect! This is where you will track your emotions, 
-                reflect on your thoughts, and discover insights about your personal growth journey.
-              </p>
-              {user?.emailVerified === false && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-yellow-800 text-sm flex items-center gap-1">
-                  <span className="material-symbols-outlined text-base">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8 p-4 md:p-8"
+    >
+      {/* Welcome Header */}
+      <motion.div variants={itemVariants} className="relative">
+        <div className="absolute top-0 right-0">
+           <button
+             onClick={handleLogout}
+             disabled={isLoggingOut}
+             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white/50 rounded-lg shadow-sm hover:bg-white/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+             {isLoggingOut ? 'Signing out...' : 'Sign Out'}
+           </button>
+        </div>
+        <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+              Welcome back, {userFirstName}
+            </h1>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              Ready to continue your journey of self-discovery and emotional growth? 
+              Choose an area to explore today.
+            </p>
+            
+            {user?.emailVerified === false && (
+              <motion.div 
+                variants={itemVariants}
+                className="mt-6 glass-card p-4 max-w-md mx-auto border-yellow-400/30"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-yellow-600">
                     mark_email_unread
                   </span>
-                  Please check your email and verify your account to unlock all features.
-                </p>
-              </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Feature Cards */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <motion.div variants={itemVariants} className="card">
-              <div className="text-center">
-              <div className="mx-auto h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                <span
-                  className="material-symbols-outlined text-blue-600"
-                  style={{ fontSize: '2.5rem', lineHeight: 1 }}
-                >
-                  edit_note
-                </span>
-              </div>
-
-
-                <h3 className="text-lg font-semibold text-brand-black mb-2">
-                  Emotion Logging
-                </h3>
-                <p className="text-brand-black/60 text-sm">
-                  Quickly capture and track your daily emotions with our intuitive logging system.
-                </p>
-                <button className="mt-4 btn-secondary w-full">
-                  Coming Soon
-                </button>
-              </div>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="card">
-              <div className="text-center">
-              <div className="mx-auto h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-green-600 text-2xl"
-                  style={{ fontSize: '2.5rem', lineHeight: 1 }}
-                  >
-                  neurology
-                </span>
-              </div>
-
-                <h3 className="text-lg font-semibold text-brand-black mb-2">
-                  AI Insights
-                </h3>
-                <p className="text-brand-black/60 text-sm">
-                  Get personalized insights and patterns from your emotional data powered by AI.
-                </p>
-                <button className="mt-4 btn-secondary w-full">
-                  Coming Soon
-                </button>
-              </div>
-            </motion.div>
-
-            <motion.div variants={itemVariants} className="card">
-              <div className="text-center">
-                <div className="mx-auto h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center mb-4">
-                  <span className="material-symbols-outlined text-purple-600"
-                     style={{ fontSize: '2.5rem', lineHeight: 1 }}
-                  >
-                    bar_chart
-                  </span>
+                  <div className="text-left">
+                    <p className="text-yellow-700 font-medium">Verify your email</p>
+                    <p className="text-yellow-600 text-sm">
+                      Check your inbox to unlock all features.
+                    </p>
+                  </div>
                 </div>
+              </motion.div>
+            )}
+        </div>
+      </motion.div>
 
-                <h3 className="text-lg font-semibold text-brand-black mb-2">
-                  Growth Tracking
-                </h3>
-                <p className="text-brand-black/60 text-sm">
-                  Visualize your emotional journey and track your personal growth over time.
-                </p>
-                <button className="mt-4 btn-secondary w-full">
-                  Coming Soon
-                </button>
-              </div>
-            </motion.div>
+      {/* Quick Stats */}
+      <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-3">
+        <div className="glass-card p-6 text-center">
+          <div className="text-3xl font-bold text-gray-800 mb-2">0</div>
+          <div className="text-gray-600 text-sm">Emotions Logged</div>
+        </div>
+        <div className="glass-card p-6 text-center">
+          <div className="text-3xl font-bold text-gray-800 mb-2">0</div>
+          <div className="text-gray-600 text-sm">Journal Entries</div>
+        </div>
+        <div className="glass-card p-6 text-center">
+          <div className="text-3xl font-bold text-gray-800 mb-2">
+            {user?.metadata.creationTime 
+              ? Math.floor((Date.now() - new Date(user.metadata.creationTime).getTime()) / (1000 * 60 * 60 * 24))
+              : 0
+            }
           </div>
+          <div className="text-gray-600 text-sm">Days Active</div>
+        </div>
+      </motion.div>
 
-          {/* User Information */}
-          <motion.div variants={itemVariants} className="card">
-            <h3 className="text-lg font-semibold text-brand-black mb-4">
-              Account Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-brand-black/60">Email:</span>
-                <span className="text-brand-black font-medium">{user?.email}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-brand-black/60">Display Name:</span>
-                <span className="text-brand-black font-medium">
-                  {user?.displayName || 'Not set'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-brand-black/60">Account Created:</span>
-                <span className="text-brand-black font-medium">
-                  {user?.metadata.creationTime 
-                    ? new Date(user.metadata.creationTime).toLocaleDateString()
-                    : 'Unknown'
-                  }
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center py-2">
-                <span className="text-brand-black/60">Email Verified:</span>
-                <span className={`font-medium flex items-center gap-1 ${user?.emailVerified ? 'text-green-600' : 'text-yellow-600'}`}>
-                  <span className="material-symbols-outlined">
-                    {user?.emailVerified ? 'check_circle' : 'hourglass_bottom'}
-                  </span>
-                  {user?.emailVerified ? 'Verified' : 'Pending'}
-                </span>
-              </div>
-
-            </div>
-          </motion.div>
-
-          {/* Development Status */}
-          <motion.div variants={itemVariants} className="card bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-            <div className="text-center">
-              
-              <h3 className="text-lg font-semibold text-brand-black mb-2 flex items-center gap-2">
-                <span
-                  className="material-symbols-outlined text-grey-500"
-                  style={{ fontSize: '2rem', lineHeight: 1 }}
-                >
-                  construction
-                </span>
-                Development Status
-              </h3>
-
-              <p className="text-brand-black/60 text-sm mb-4">
-                You are experiencing the early access version of soulspect. 
-                New features are being added regularly.
-              </p>
-              <div className="text-xs text-brand-black/50">
-                Current Version: Alpha 1.0 • Last Updated: {new Date().toLocaleDateString()}
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </main>
-    </div>
+      {/* Recent Activity Placeholder */}
+      <motion.div variants={itemVariants} className="glass-card p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="material-symbols-outlined text-gray-700 text-xl">
+            timeline
+          </span>
+          <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
+        </div>
+        <div className="text-center py-12">
+          <div className="w-24 h-24 mx-auto rounded-full bg-white/30 flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-gray-500 text-3xl">
+              sentiment_satisfied
+            </span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">
+            Your journey begins here
+          </h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            Start logging your emotions or writing in your journal to see your activity here.
+          </p>
+        </div>
+      </motion.div>
+      
+      {/* Development Status */}
+      <motion.div variants={itemVariants} className="glass-card p-6 border-blue-400/30">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="material-symbols-outlined text-blue-600">
+            construction
+          </span>
+          <h3 className="text-lg font-semibold text-gray-800">Development Status</h3>
+        </div>
+        <p className="text-gray-600 text-sm mb-4">
+          You're experiencing an early access version. 
+          New features are being added regularly to help you on your emotional growth journey.
+        </p>
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>Version: Alpha 1.1</span>
+          <span>Last Updated: {currentDate}</span>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
