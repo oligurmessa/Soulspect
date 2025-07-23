@@ -1,8 +1,11 @@
+// src/components/AuthContext.tsx
+
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { createUser, getUser } from "@/lib/dbHelpers";
 
 interface AuthContextType {
   user: User | null;
@@ -21,7 +24,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check if user exists in Firestore, if not create them
+        try {
+          const existingUser = await getUser(user.uid);
+          if (!existingUser) {
+            await createUser({
+              uid: user.uid,
+              email: user.email || '',
+              displayName: user.displayName || '',
+              photoURL: user.photoURL || '',
+              preferences: {
+                theme: 'system',
+                notifications: true,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('Error creating user in Firestore:', error);
+        }
+      }
       setUser(user);
       setLoading(false);
     });

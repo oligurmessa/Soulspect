@@ -1,0 +1,112 @@
+rules_version='2'
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isValidUser(userData) {
+      return userData.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt', 'preferences']) &&
+             userData.uid is string &&
+             userData.email is string &&
+             userData.preferences is map;
+    }
+    
+    function isValidEmotionLog(logData) {
+      return logData.keys().hasAll(['userId', 'mood', 'emotions', 'createdAt', 'updatedAt']) &&
+             logData.mood is number &&
+             logData.mood >= 0 &&
+             logData.mood <= 6 &&
+             logData.emotions is list &&
+             logData.emotions.size() <= 10;
+    }
+    
+    function isValidJournalEntry(entryData) {
+      return entryData.keys().hasAll(['userId', 'title', 'content', 'entryType', 'isDraft', 'date', 'createdAt', 'updatedAt']) &&
+             entryData.title is string &&
+             entryData.content is string &&
+             entryData.entryType in ['text', 'voice', 'video'] &&
+             entryData.isDraft is bool;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      // Emotion logs subcollection
+      match /emotionLogs/{logId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidEmotionLog(request.resource.data);
+        allow update: if isOwner(userId) && isValidEmotionLog(request.resource.data);
+      }
+      
+      // Journal entries subcollection
+      match /journalEntries/{entryId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidJournalEntry(request.resource.data);
+        allow update: if isOwner(userId) && isValidJournalEntry(request.resource.data);
+      }
+      
+      // Soul work exercises subcollection
+      match /soulWorkExercises/{exerciseId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && 
+                         request.resource.data.keys().hasAll(['userId', 'exerciseType', 'title', 'responses', 'duration', 'completedAt', 'createdAt']) &&
+                         request.resource.data.exerciseType in ['shadow-work', 'inner-child', 'values', 'purpose'] &&
+                         request.resource.data.duration is number &&
+                         request.resource.data.duration >= 0;
+      }
+      
+      // User values subcollection
+      match /values/{valueId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && 
+                         request.resource.data.keys().hasAll(['userId', 'values', 'createdAt', 'updatedAt']) &&
+                         request.resource.data.values is list;
+      }
+      
+      // Compass entries subcollection
+      match /compass/{direction} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && 
+                         request.resource.data.keys().hasAll(['userId', 'direction', 'goals', 'progress', 'createdAt', 'updatedAt']) &&
+                         request.resource.data.direction in ['north', 'south', 'east', 'west'] &&
+                         request.resource.data.goals is list &&
+                         request.resource.data.progress is number &&
+                         request.resource.data.progress >= 0 &&
+                         request.resource.data.progress <= 100;
+      }
+      
+      // Soulspace items subcollection
+      match /soulspaceItems/{itemId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && 
+                         request.resource.data.keys().hasAll(['userId', 'type', 'title', 'content', 'isPrivate', 'createdAt', 'updatedAt']) &&
+                         request.resource.data.type in ['note', 'image', 'audio', 'video', 'link'] &&
+                         request.resource.data.title is string &&
+                         request.resource.data.content is string &&
+                         request.resource.data.isPrivate is bool;
+      }
+      
+      // Analytics subcollection
+      match /analytics/{analyticsId} {
+        allow read, write: if isOwner(userId);
+        allow create: if isOwner(userId) && 
+                         request.resource.data.keys().hasAll(['userId', 'period', 'date', 'emotionStats', 'journalStats', 'soulWorkStats', 'createdAt']) &&
+                         request.resource.data.period in ['daily', 'weekly', 'monthly'] &&
+                         request.resource.data.emotionStats is map &&
+                         request.resource.data.journalStats is map &&
+                         request.resource.data.soulWorkStats is map;
+      }
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

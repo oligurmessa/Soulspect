@@ -1,3 +1,4 @@
+// src/components/AnimatedLandingContent.tsx
 "use client";
 
 import { motion, type Variants } from "framer-motion";

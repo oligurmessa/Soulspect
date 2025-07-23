@@ -1,10 +1,8 @@
-// src/lib/firebase.ts
-
-"use client"
-
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,13 +13,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-// Initialize Firebase Authentication and get a reference to the service
-const auth = getAuth(app);
-
-// Initialize Cloud Firestore and get a reference to the service
-const db = getFirestore(app);
-
-export { app, auth, db };
+export const auth = getAuth(app);
+export const db   = getFirestore(app);
+export const storage = getStorage(app);
+export const fx   = getFunctions(app, "us-central1"); // rename region if needed
