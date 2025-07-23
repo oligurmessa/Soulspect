@@ -30,10 +30,10 @@ const MessageBubble: React.FC<{ message: Message; isLast: boolean }> = ({ messag
 
   const getTypeColor = () => {
     switch (message.type) {
-      case 'explore': return 'border-blue-500/30 bg-blue-500/10';
-      case 'release': return 'border-purple-500/30 bg-purple-500/10';
-      case 'decide': return 'border-orange-500/30 bg-orange-500/10';
-      default: return '';
+      case 'explore': return 'border-blue-500/30 bg-blue-500/10 text-blue-800 dark:text-blue-300';
+      case 'release': return 'border-purple-500/30 bg-purple-500/10 text-purple-800 dark:text-purple-300';
+      case 'decide': return 'border-orange-500/30 bg-orange-500/10 text-orange-800 dark:text-orange-300';
+      default: return 'bg-secondary text-secondary-foreground';
     }
   };
 
@@ -48,8 +48,8 @@ const MessageBubble: React.FC<{ message: Message; isLast: boolean }> = ({ messag
       className={`flex gap-3 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       {!isUser && (
-        <div className="w-8 h-8 rounded-full shadow-lg flex-shrink-0">
-          <Bot className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg flex-shrink-0">
+          <Bot className="w-4 h-4" />
         </div>
       )}
       
@@ -57,9 +57,7 @@ const MessageBubble: React.FC<{ message: Message; isLast: boolean }> = ({ messag
         <div
           className={cn(
             "rounded-2xl px-4 py-3 shadow-lg backdrop-blur-sm transition-all duration-300",
-            isUser
-              ? ` ${getTypeColor()}`
-              : ""
+            isUser ? getTypeColor() : "bg-transparent text-foreground"
           )}
         >
           {message.type && (
@@ -78,8 +76,8 @@ const MessageBubble: React.FC<{ message: Message; isLast: boolean }> = ({ messag
       </div>
 
       {isUser && (
-        <div className="w-8 h-8 rounded-full  flex items-center justify-center shadow-lg flex-shrink-0">
-          <User className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center shadow-lg flex-shrink-0">
+          <User className="w-4 h-4" />
         </div>
       )}
     </motion.div>
@@ -94,16 +92,16 @@ const TypingIndicator: React.FC = () => (
     exit={{ opacity: 0, y: -20 }}
     className="flex gap-3 mb-6"
   >
-    <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center shadow-lg">
-      <Bot className="w-4 h-4 text-white" />
+    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shadow-lg">
+      <Bot className="w-4 h-4 text-secondary-foreground" />
     </div>
 
-    <div className="bg-gray-800 rounded-2xl px-4 py-3 border border-gray-600/30 shadow-lg backdrop-blur-sm">
+    <div className="bg-secondary rounded-2xl px-4 py-3 border border-border/30 shadow-lg backdrop-blur-sm">
       <div className="flex gap-1">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="w-2 h-2 bg-gray-400 rounded-full"
+            className="w-2 h-2 bg-muted-foreground rounded-full"
             animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
             transition={{
               duration: 1.5,
@@ -230,7 +228,7 @@ Respond as a compassionate guide in 1-3 sentences. Be authentic, insightful, and
   };
 
   return (
-    <div className="h-full text-white flex flex-col relative">
+    <div className="h-full text-foreground flex flex-col relative">
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
@@ -244,7 +242,7 @@ Respond as a compassionate guide in 1-3 sentences. Be authentic, insightful, and
                 <Brain className="w-8 h-8 text-blue-400" />
               </div>
               <h2 className="text-lg font-semibold mb-2">Welcome to Soulspace</h2>
-              <p className="text-sm text-gray-400 text-center max-w-md">
+              <p className="text-sm text-muted-foreground text-center max-w-md">
                 This is your private space for reflection, transformation, and decision-making. Share what's on your mind and let the AI guide you through different modes of self-discovery.
               </p>
             </div>
@@ -282,7 +280,7 @@ Respond as a compassionate guide in 1-3 sentences. Be authentic, insightful, and
           
           {/* Subtle indicator */}
           <div className="text-center mt-2">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Data is not stored or shared. This is a private space for your thoughts.
             </p>
           </div>

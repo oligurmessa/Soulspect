@@ -1,5 +1,11 @@
 // app/analytics/(components)/lib/analyticsUtils.ts
-import { EmotionLog, JournalEntry, AIInsight } from './types';
+import { EmotionLog, JournalEntry } from '@/lib/dbHelpers';
+
+export interface AIInsight {
+  summary: string;
+  moodTrend: string;
+  recommendation: string;
+}
 
 // AI Insight Generation
 export const generateAIInsight = (emotions: EmotionLog[], journals: JournalEntry[]): AIInsight => {

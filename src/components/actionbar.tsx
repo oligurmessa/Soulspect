@@ -114,12 +114,12 @@ export function Actionbar({
     >
       <div
         className={cn(
-          "flex items-center gap-2 px-2 py-2 rounded-xl shadow-sm bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-md border border-neutral-200 dark:border-neutral-700",
+          "flex items-center gap-2 px-2 py-2 rounded-xl shadow-sm bg-background/90 backdrop-blur-md border border-border",
           className,
         )}
       >
         {/* Selectable Modes */}
-        <div className="flex items-center gap-1 px-1 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+        <div className="flex items-center gap-1 px-1 py-1 rounded-lg bg-muted">
           {ActionbarItems.filter(i => SELECTABLE_MODES.includes(i.id)).map((item) => {
             const isSelected = selectedMode === item.id
 
@@ -133,8 +133,8 @@ export function Actionbar({
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200",
                   isSelected
-                    ? "bg-blue-500 text-white shadow"
-                    : "text-neutral-700 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700",
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:bg-secondary/70 dark:hover:bg-secondary/70",
                 )}
               >
                 <item.icon size={16} />
@@ -158,7 +158,7 @@ export function Actionbar({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onClick}
-                className="p-2 rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
               >
                 <item.icon size={18} />
               </motion.button>
@@ -174,7 +174,7 @@ export function Actionbar({
           disabled={isSaving}
           className={cn(
             "flex items-center gap-2 px-4 py-2 rounded-lg border font-medium transition-all duration-200",
-            "text-white border-white hover:bg-gray-50 dark:hover:bg-gray-900/20",
+            "bg-primary text-primary-foreground hover:bg-primary/90",
             isSaving && "opacity-50 cursor-not-allowed",
           )}
         >

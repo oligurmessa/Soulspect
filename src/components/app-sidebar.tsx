@@ -40,18 +40,18 @@ export function AppSidebar() {
     <Sidebar
       collapsible="icon"
       className={cn(
-        "sidebar-custom bg-black/30 backdrop-blur-lg border-r border-white/10",
+        "sidebar-custom bg-background/30 backdrop-blur-lg border-r border-border",
         isCollapsed ? "w-20" : "w-64" // Change collapsed/expanded width here
       )}
     >
       {/* Sidebar Header */}
-      <SidebarHeader className="border-b border-white/10 p-2">
+      <SidebarHeader className="border-b border-border p-2">
         <div className="relative flex items-center justify-center w-full">
           {/* Logo + Brand when expanded */}
           <Link
             href="/dashboard"
             className={cn(
-              "flex items-center p-2 rounded-lg transition-all duration-200 hover:bg-white/10",
+              "flex items-center p-2 rounded-lg transition-all duration-200 hover:bg-secondary",
               isCollapsed ? "opacity-0 pointer-events-none absolute" : "gap-2 w-full"
             )}
           >
@@ -67,7 +67,7 @@ export function AppSidebar() {
             isCollapsed ? "opacity-100" : "opacity-0 pointer-events-none absolute",
             "transition-all duration-200"
           )}>
-            <SidebarTrigger className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-white/10 p-0">
+            <SidebarTrigger className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-secondary p-0">
               <span className="material-symbols-outlined text-3xl">dashboard</span>
             </SidebarTrigger>
           </div>
@@ -76,7 +76,7 @@ export function AppSidebar() {
             "transition-all duration-200 ml-auto",
             !isCollapsed ? "opacity-100" : "opacity-0 pointer-events-none absolute"
           )}>
-            <SidebarTrigger className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 p-0">
+            <SidebarTrigger className="w-8 h-8 flex items-center justify-center rounded hover:bg-secondary p-0">
               <span className="material-symbols-outlined text-2xl">side_navigation</span>
             </SidebarTrigger>
           </div>
@@ -90,7 +90,12 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith(item.href)}
+                isActive={item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href) &&
+                    (pathname.length === item.href.length ||
+                      pathname[item.href.length] === '/')
+                }
                 tooltip={item.title}
                 className="sidebar-menu-button mb-1"
               >

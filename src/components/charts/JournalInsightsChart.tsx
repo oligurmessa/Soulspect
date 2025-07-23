@@ -3,23 +3,19 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { FileText, MessageSquare, Check, Type, Mic, Video } from 'lucide-react';
+import { FileText, MessageSquare, Check, Type } from 'lucide-react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { 
   PieChart as RechartsPieChart, 
   Pie, 
-  Cell, 
-  Tooltip, 
-  ResponsiveContainer,
-  Label
+  Cell
 } from 'recharts';
 
 interface JournalInsightsChartProps {
   insights: any;
 }
 
-const triggerColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
 
 const JournalInsightsChart: React.FC<JournalInsightsChartProps> = ({ insights }) => {
   return (
@@ -33,26 +29,53 @@ const JournalInsightsChart: React.FC<JournalInsightsChartProps> = ({ insights })
           <CardDescription>Breakdown of your journaling methods</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <RechartsPieChart>
+          <ChartContainer
+            config={{
+              ...insights.typeBreakdown.reduce((acc: any, entry: any, index: number) => ({
+                ...acc,
+                [entry.type]: {
+                  label: entry.type.charAt(0).toUpperCase() + entry.type.slice(1),
+                  color: `hsl(var(--chart-${(index % 5) + 1}))`,
+                },
+              }), {}),
+            }}
+            className="h-[300px]"
+          >
+            <RechartsPieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
               <Pie
                 data={insights.typeBreakdown}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ type, percent }) => `${type}: ${((percent ?? 0) * 100).toFixed(0)}%`}
-                outerRadius={80}
+                label={({ type, count, percent }) => 
+                  count > 0 ? `${type}: ${count} (${((percent ?? 0) * 100).toFixed(0)}%)` : ''
+                }
+                outerRadius={90}
+                innerRadius={40}
+                paddingAngle={2}
                 fill="#8884d8"
                 dataKey="count"
                 nameKey="type"
+                strokeWidth={2}
+                stroke="hsl(var(--background))"
               >
-                {insights.typeBreakdown.map((_entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={triggerColors[index % triggerColors.length]} />
+                {insights.typeBreakdown.map((entry: any, index: number) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`var(--color-${entry.type})`}
+                  />
                 ))}
               </Pie>
-              <Tooltip />
+              <ChartTooltip 
+                content={<ChartTooltipContent 
+                  formatter={(value, name) => [
+                    `${value} entries`,
+                    name
+                  ]}
+                />} 
+              />
             </RechartsPieChart>
-          </ResponsiveContainer>
+          </ChartContainer>
         </CardContent>
       </Card>
 

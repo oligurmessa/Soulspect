@@ -16,13 +16,15 @@ import { addHabitLog } from "@/lib/dbHelpers"
 interface HabitsLogDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  mode?: "create" | "edit"
+  onHabitSaved?: (habitData: any) => void
 }
 
 const frequencies = ["Daily", "Weekly", "Custom"]
 const timesOfDay = ["Morning", "Afternoon", "Evening", "Night"]
 const estimatedFrequencies = ["Multiple times daily", "Daily", "Few times a week", "Weekly", "Few times a month", "Monthly"]
 
-export function HabitsLogDrawer({ open, onOpenChange }: HabitsLogDrawerProps) {
+export function HabitsLogDrawer({ open, onOpenChange, mode = "create", onHabitSaved }: HabitsLogDrawerProps) {
   const [step, setStep] = useState<"basic" | "details" | "complete">("basic")
   const [habitName, setHabitName] = useState("")
   const [habitType, setHabitType] = useState<"Build" | "Break" | "">("")
@@ -108,6 +110,11 @@ export function HabitsLogDrawer({ open, onOpenChange }: HabitsLogDrawerProps) {
         title: "Success!",
         description: "Your habit has been saved.",
       })
+
+      // Call the callback if provided
+      if (onHabitSaved) {
+        onHabitSaved(habitData)
+      }
 
       resetForm()
       onOpenChange(false)

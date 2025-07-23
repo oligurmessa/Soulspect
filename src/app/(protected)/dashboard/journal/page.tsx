@@ -293,7 +293,6 @@ export default function JournalHistoryPage() {
   return (
     <div className="data-table-container">
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Journal History</h1>
         <p className="text-muted-foreground">View your emotion logs and journal entries over time.</p>
       </div>
       <DataTable table={table}>

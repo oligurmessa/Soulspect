@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, BookOpen, Activity, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
-import { EmotionLog } from './lib/types';
+import { EmotionLog } from '@/lib/dbHelpers';
 
 interface SummaryCardsProps {
   emotionLogs: EmotionLog[];

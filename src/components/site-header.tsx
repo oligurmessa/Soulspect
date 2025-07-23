@@ -19,7 +19,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-white">{pageTitle}</h1>
+        <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
       </div>
 
       <div className="ml-auto">
