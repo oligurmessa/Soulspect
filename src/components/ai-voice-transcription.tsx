@@ -57,7 +57,7 @@ export default function AIVoiceTranscription({
 
   // Get Speech Recognition API
   const SpeechRecognition = 
-    CAN_USE_DOM && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    CAN_USE_DOM ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 
   useEffect(() => {
     setIsClient(true);
@@ -91,7 +91,7 @@ export default function AIVoiceTranscription({
   useEffect(() => {
     if (!SUPPORT_SPEECH_RECOGNITION) return;
 
-    if (isRecording && !isPaused && !recognition.current) {
+    if (isRecording && !isPaused && !recognition.current && SpeechRecognition) {
       recognition.current = new SpeechRecognition();
       recognition.current.continuous = true;
       recognition.current.interimResults = true;

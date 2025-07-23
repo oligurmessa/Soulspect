@@ -116,7 +116,7 @@ const MoodTrendChart: React.FC<MoodTrendChartProps> = ({
                 ]}
               />} 
             />
-            <ChartLegend content={<ChartLegendContent />} />
+            <ChartLegend content={<ChartLegendContent payload={[]} />} />
             <Area
               yAxisId="left"
               type="monotone"

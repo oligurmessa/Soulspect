@@ -28,7 +28,7 @@ const AnalyticsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [emotionLogs, setEmotionLogs] = useState<EmotionLog[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [aiInsight, setAiInsight] = useState<AIInsight | null>(null);
+  const [, setAiInsight] = useState<AIInsight | null>(null);
 
   useEffect(() => {
     if (!user) return;

@@ -13,9 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Icons } from "@/components/icons"
 import Link from "next/link"
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-export default function RegisterPage({ className, ...props }: UserAuthFormProps) {
+export default function RegisterPage() {
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
   const [email, setEmail] = React.useState<string>("")
   const [password, setPassword] = React.useState<string>("")
@@ -29,9 +27,10 @@ export default function RegisterPage({ className, ...props }: UserAuthFormProps)
       await createUserWithEmailAndPassword(auth, email, password)
       toast.success("Account created successfully!")
       router.push("/dashboard") // Redirect to dashboard after successful registration
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error)
-      toast.error(error.message || "Registration failed. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Registration failed. Please try again."
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -40,7 +39,7 @@ export default function RegisterPage({ className, ...props }: UserAuthFormProps)
   return (
     <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm md:max-w-3xl">
-        <div className={cn("grid gap-6", className)} {...props}>
+        <div className="grid gap-6">
           <form onSubmit={onSubmit}>
             <div className="grid gap-4">
               <div className="grid gap-2">
