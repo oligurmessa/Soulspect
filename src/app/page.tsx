@@ -6,9 +6,11 @@ import Frame from "@/components/landing/tabs";
 import Component from "@/components/landing/logo_particles";
 import { Montserrat } from 'next/font/google'
 import { Button } from "@/components/ui/button";
+import BrandButton from "@/components/landing/button";
 import { Badge } from "@/components/ui/badge";
 import { TypewriterEffectSmooth } from "@/components/landing/typewriter-effect"
 import { Moon, Sun, GalleryHorizontalEnd } from 'lucide-react';
+import Link from 'next/link';
 
 const montserrat = Montserrat({
   weight: '700',
@@ -105,16 +107,6 @@ export default function HomePage() {
       {/* Renders the particle component */}
       <Component/> 
       <Frame/>
-      {/* Soulspect logo positioned right next to the particle logo with fixed positioning */}
-      <div className="fixed z-50" style={{ top: '-10px', left: '10px' }}>
-        <a
-        href="https://soulspect.com"
-        className={`absolute top-7 left-48 text-white text-4xl font-bold py-2 px-4 ${montserrat.className}`}
-        style={{ textShadow: '0 0 10px rgba(0, 220, 255, 0.7)' }} // Optional: Add a subtle glow
-      >
-        soulspect
-      </a>
-      </div>
 
       {/* Theme toggle and button positioned on the right */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
@@ -171,7 +163,7 @@ export default function HomePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {features.map((feature, index) => (
                   <div key={index} className="flex flex-row gap-6 w-full items-start">
-                    <Check className="w-4 h-4 mt-2 text-blue-600 flex-shrink-0" />
+                    <Check className="w-4 h-4 mt-2 text-orange-300 flex-shrink-0" />
                     <div className="flex flex-col gap-1">
                       <p className="font-medium">{feature.title}</p>
                       <p className="text-muted-foreground text-sm">{feature.description}</p>
@@ -195,12 +187,13 @@ export default function HomePage() {
               </p>
             </div>
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="rounded-xl bg-blue-600 hover:bg-blue-700">
-                <a href="/dashboard">Begin Your Journey</a>
-              </Button>
+            <BrandButton label="Begin Your Journey" selected={true} onClick={() => window.location.href = "/dashboard"} />
+
               <Button variant="outline" size="lg" className="rounded-xl bg-transparent">
                 <a href="#pillars">Explore Features</a>
               </Button>
+
+
             </div>
             <div className="pointer-events-none absolute -top-1 right-1 z-10 hidden h-full w-full bg-[linear-gradient(to_right,hsl(var(--muted-foreground))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--muted-foreground))_1px,transparent_1px)] bg-[size:80px_80px] opacity-15 [mask-image:linear-gradient(to_bottom_right,#000,transparent,transparent)] md:block"></div>
           </div>
@@ -208,14 +201,14 @@ export default function HomePage() {
       </section>
 
       {/* Three Pillars Section */}
-      <section id="pillars" className="py-20 lg:py-32 bg-gradient-to-b from-transparent to-blue-50/30 dark:to-blue-900/10">
+      <section id="pillars" className="py-20 lg:py-32 bg-gradient-to-b from-transparent to-orange-50/30 dark:to-orange-900/10">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 mb-6">
               Core Features
             </Badge>
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter">
-              Three Pillars of <span className="text-blue-600">Self-Discovery</span>
+              Three Pillars of <span className="text-orange-300">Self-Discovery</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Soulspect provides three core areas to help you understand yourself better and create lasting transformation.
@@ -259,7 +252,7 @@ export default function HomePage() {
               Process
             </Badge>
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tighter">
-              Your Journey to <span className="text-blue-600">Self-Mastery</span>
+              Your Journey to <span className="text-orange-300">Self-Mastery</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Follow our proven three-step process to unlock emotional intelligence and transform your inner world.
@@ -317,9 +310,9 @@ export default function HomePage() {
       <footer className="pb-6 pt-16 lg:pb-8 lg:pt-24 border-t">
         <div className="container mx-auto px-4">
           <div className="md:flex md:items-start md:justify-between">
-            <a href="/" className="flex items-center gap-x-2" aria-label="Soulspect">
+            <Link href="/" className="flex items-center gap-x-2" aria-label="Soulspect">
               <span className={`font-bold text-xl ${montserrat.className}`}>soulspect</span>
-            </a>
+            </Link>
             <ul className="flex list-none mt-6 md:mt-0 space-x-3">
               {socialLinks.map((link, i) => (
                 <li key={i}>
@@ -356,7 +349,7 @@ export default function HomePage() {
               </ul>
             </div>
             <div className="mt-6 text-sm leading-6 text-muted-foreground whitespace-nowrap lg:mt-0 lg:row-[1/3] lg:col-[1/4]">
-              <div>© 2024 Soulspect. All rights reserved.</div>
+              <div>© 2025 soulspect. Minneapolis, Mn.</div>
             </div>
           </div>
         </div>

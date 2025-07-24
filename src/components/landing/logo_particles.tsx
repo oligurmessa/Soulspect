@@ -8,6 +8,7 @@ export default function Component() {
   const mousePositionRef = useRef({ x: 0, y: 0 })
   const isTouchingRef = useRef(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(true)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -21,6 +22,21 @@ export default function Component() {
       canvas.height = window.innerHeight
       setIsMobile(window.innerWidth < 768) // Set mobile breakpoint
     }
+
+    // Check theme on mount and when class changes
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+    }
+
+    checkTheme()
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
 
     updateCanvasSize()
 
@@ -38,14 +54,14 @@ export default function Component() {
 
     let textImageData: ImageData | null = null
 
-    const coolColors = [
-      "#FF8C00",
-      "#FF7F00",
-      "#FF6B00",
-      "#FF5722",
-      "#FF4500",
-      "#FF8500",
-    ]
+const coolColors = [
+  "#ff9066", // Primary soft orange
+  "#FFE8D6", // Creamy beige (background or light fill)
+  "#F7C59F", // Sand tan (tone-on-tone warmth)
+  "#ff9066", // Primary soft orange
+  
+];
+
 
     function createTextImage() {
       if (!ctx || !canvas) return
@@ -152,7 +168,7 @@ export default function Component() {
         } else {
           p.x += (p.baseX - p.x) * 0.05
           p.y += (p.baseY - p.y) * 0.05
-          ctx.fillStyle = "white"
+          ctx.fillStyle = isDarkMode ? "white" : "black"
         }
 
         ctx.fillRect(p.x, p.y, p.size, p.size)
@@ -222,15 +238,30 @@ export default function Component() {
       canvas.removeEventListener("mouseleave", handleMouseLeave)
       canvas.removeEventListener("touchstart", handleTouchStart)
       canvas.removeEventListener("touchend", handleTouchEnd)
+      observer.disconnect()
       cancelAnimationFrame(animationFrameId)
     }
-  }, [isMobile])
+  }, [isMobile, isDarkMode])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed top-0 left-0 w-full h-full touch-none z-0"
-      aria-label="Interactive particle effect of a logo"
-    />
+    <div className="fixed top-0 left-0 w-full h-full z-0">
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full touch-none"
+        aria-label="Interactive particle effect of a logo"
+      />
+      {/* Soulspect text positioned next to the particle logo */}
+      <a
+        href="https://soulspect.com"
+        className={`absolute top-[18px] left-48 ${isDarkMode ? 'text-white' : 'text-gray-800'} text-4xl font-bold py-2 px-4 transition-colors hover:text-orange-300`}
+        style={{ 
+          textShadow: '0 0 10px rgba(255, 144, 102, 0.7)',
+          fontFamily: 'Montserrat, sans-serif',
+          fontWeight: 700
+        }}
+      >
+        soulspect
+      </a>
+    </div>
   )
 }
