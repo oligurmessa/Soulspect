@@ -1,21 +1,33 @@
 
 // HomePage.tsx (or your page file)
 "use client"
-import { Check, BarChart, Brain, Crosshair, FileText, Rocket } from "lucide-react";
+import { Check, BarChart, Brain, Crosshair, FileText, Rocket, Moon, Sun, GalleryHorizontalEnd } from "lucide-react";
 import Frame from "@/components/landing/tabs";
-import Component from "@/components/landing/logo_particles";
 import { Montserrat } from 'next/font/google'
+import dynamic from 'next/dynamic'
 
 import { Button } from "@/components/ui/button";
 import BrandButton from "@/components/landing/button";
 import { InteractiveHoverButton } from "@/components/landing/interactive-hover-button";
 import { TypewriterEffectSmooth } from "@/components/landing/typewriter-effect"
-import { Moon, Sun, GalleryHorizontalEnd } from 'lucide-react';
 import Link from 'next/link';
-
-import { Squares } from "@/components/landing/squares-background";
-import { FeaturesSectionWithHoverEffects } from "@/components/landing/features-effects";
 import Footer from "@/components/landing/footer";
+import Loading from "@/components/landing/loading";
+
+const Component = dynamic(() => import('@/components/landing/logo_particles'), {
+  loading: () => <Loading />,
+  ssr: false
+});
+
+const Squares = dynamic(() => import('@/components/landing/squares-background').then(m => m.Squares), {
+  loading: () => <Loading />,
+  ssr: false
+});
+
+const FeaturesSectionWithHoverEffects = dynamic(() => import('@/components/landing/features-effects').then(m => m.FeaturesSectionWithHoverEffects), {
+  loading: () => <Loading />,
+  ssr: false
+});
 const montserrat = Montserrat({
   weight: '700',
   subsets: ['latin'],
@@ -124,11 +136,11 @@ export default function HomePage() {
         {/* Get Started button */}
 
 
-        <InteractiveHoverButton >
-          <a href="/dashboard">
+        <Link href="/dashboard">
+          <InteractiveHoverButton>
             Get Started
-          </a>
-        </InteractiveHoverButton>
+          </InteractiveHoverButton>
+        </Link>
       </div>
       
       
@@ -141,11 +153,13 @@ export default function HomePage() {
             </p>
             <TypewriterEffectSmooth words={words} />
             <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-4 mt-8">
-              <Button size="lg" className="dark w-40 h-12 rounded-xl bg-white/85 hover:bg-white">
-                <a href="/dashboard">Start Journey</a>
-              </Button>
-              <Button variant="outline" size="lg" className="w-40 h-12 rounded-xl bg-transparent">
-                <a href="#features">Learn More</a>
+              <Link href="/dashboard">
+                <Button size="lg" className="dark w-40 h-12 rounded-xl bg-white/85 hover:bg-white">
+                  Start Journey
+                </Button>
+              </Link>
+              <Button variant="outline" size="lg" className="w-40 h-12 rounded-xl bg-transparent" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+                Learn More
               </Button>
             </div>
           </div>
@@ -194,9 +208,11 @@ export default function HomePage() {
         </p>
       </div>
       <div className="mt-8 flex flex-col sm:flex-row gap-4">
-        <BrandButton label="Begin Your Journey" selected={true} onClick={() => window.location.href = "/dashboard"} />
-        <Button variant="outline" size="lg" className="rounded-xl bg-transparent border-neutral-600 text-white hover:bg-neutral-800 hover:border-neutral-500">
-          <a href="#pillars">Explore Features</a>
+        <Link href="/dashboard">
+          <BrandButton label="Begin Your Journey" selected={true} />
+        </Link>
+        <Button variant="outline" size="lg" className="rounded-xl bg-transparent border-neutral-600 text-white hover:bg-neutral-800 hover:border-neutral-500" onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}>
+          Explore Features
         </Button>
       </div>
     </div>
