@@ -34,6 +34,7 @@ export interface User {
     compactMode?: boolean;
     autoSave?: boolean;
     spellCheck?: boolean;
+    appPassword?: string;
   };
 }
 
