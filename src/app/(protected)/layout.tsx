@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { LockProvider } from "@/context/LockContext";
 import AppLockScreen from "@/components/AppLockScreen";
+import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 
 
 
@@ -56,11 +57,14 @@ export default function ProtectedLayout({
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
-            <SiteHeader />
-            <NuqsAdapter>
-              {/* Main needs to be flex container to handle children growth properly */}
-              <main className="flex-1 h-full overflow-hidden">{children}</main>
-            </NuqsAdapter>
+            <div className="flex flex-col h-full">
+              <EmailVerificationBanner />
+              <SiteHeader />
+              <NuqsAdapter>
+                {/* Main needs to be flex container to handle children growth properly */}
+                <main className="flex-1 h-full overflow-hidden">{children}</main>
+              </NuqsAdapter>
+            </div>
           </SidebarInset>
         </SidebarProvider>
       </div>

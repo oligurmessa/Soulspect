@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +11,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import Input07 from "@/components/ui/password-input";
+import Input08 from "@/components/ui/biometric-input";
 import { useLock } from "@/context/LockContext";
+import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
-import { Lock, Unlock, Shield } from "lucide-react";
+import { Lock, Unlock, Shield, Fingerprint } from "lucide-react";
+import { authenticateWithBiometric, setupBiometric, isBiometricSupported, hasBiometricSetup } from "@/lib/webauthn";
 
 interface LockDialogProps {
   open: boolean;
@@ -23,9 +26,21 @@ interface LockDialogProps {
 
 export default function LockDialog({ open, onOpenChange, mode = "verify" }: LockDialogProps) {
   const { setPassword, verifyPassword, unlock, hasPassword } = useLock();
+  const { user } = useAuth();
   const [password, setPasswordInput] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [enableBiometric, setEnableBiometric] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setBiometricSupported(isBiometricSupported());
+      setBiometricEnabled(hasBiometricSetup(user.uid));
+    }
+  }, [user]);
 
   const generatePassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
@@ -79,6 +94,44 @@ export default function LockDialog({ open, onOpenChange, mode = "verify" }: Lock
     }
   };
 
+  const handleBiometricAuth = async () => {
+    if (!user) return;
+    
+    setIsAuthenticating(true);
+    try {
+      const authenticated = await authenticateWithBiometric(user.uid);
+      if (authenticated) {
+        unlock();
+        toast.success("Unlocked with biometrics");
+        onOpenChange(false);
+      } else {
+        toast.error("Biometric authentication failed");
+      }
+    } catch (error: any) {
+      console.error("Biometric auth error:", error);
+      if (error.message.includes("No biometric credential found")) {
+        toast.error("Please set up biometric authentication first");
+      } else {
+        toast.error("Biometric authentication failed");
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleSetupBiometric = async () => {
+    if (!user) return;
+    
+    try {
+      await setupBiometric(user.uid, user.email || "user@soulspect.app");
+      setBiometricEnabled(true);
+      toast.success("Biometric authentication enabled");
+    } catch (error: any) {
+      console.error("Biometric setup error:", error);
+      toast.error("Failed to set up biometric authentication");
+    }
+  };
+
   const getDialogContent = () => {
     switch (mode) {
       case "set":
@@ -118,23 +171,65 @@ export default function LockDialog({ open, onOpenChange, mode = "verify" }: Lock
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Show biometric option for unlock mode if supported and enabled */}
+          {mode === "unlock" && biometricSupported && biometricEnabled && (
+            <div className="space-y-2">
+              <Label>Quick Unlock</Label>
+              <Button
+                onClick={handleBiometricAuth}
+                disabled={isAuthenticating}
+                variant="outline"
+                className="w-full h-11 justify-start gap-3"
+              >
+                <Fingerprint className="w-4 h-4" />
+                {isAuthenticating ? "Authenticating..." : "Unlock with Touch ID / Face ID"}
+              </Button>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">or use password</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="password">
               {mode === "set" ? "New Password" : "Password"}
             </Label>
-            <Input07
-              id="password"
-              placeholder="Enter password"
-              value={password}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              showGenerateButton={mode === "set"}
-              onGenerate={generatePassword}
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && mode !== "set") {
-                  handleSubmit();
-                }
-              }}
-            />
+            {mode === "unlock" && biometricSupported && biometricEnabled ? (
+              <Input08
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onBiometricAuth={handleBiometricAuth}
+                showBiometricButton={biometricSupported && biometricEnabled}
+                isAuthenticating={isAuthenticating}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter") {
+                    handleSubmit();
+                  }
+                }}
+              />
+            ) : (
+              <Input07
+                id="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                showGenerateButton={mode === "set"}
+                onGenerate={generatePassword}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && mode !== "set") {
+                    handleSubmit();
+                  }
+                }}
+              />
+            )}
           </div>
 
           {mode === "set" && (
@@ -155,11 +250,27 @@ export default function LockDialog({ open, onOpenChange, mode = "verify" }: Lock
           )}
 
           {mode === "set" && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Important:</strong> Please remember this password. There is no way to recover it if forgotten.
-              </p>
-            </div>
+            <>
+              {biometricSupported && (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="enableBiometric"
+                    checked={enableBiometric}
+                    onChange={(e) => setEnableBiometric(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="enableBiometric" className="text-sm cursor-pointer">
+                    Enable Touch ID / Face ID for quick unlock
+                  </Label>
+                </div>
+              )}
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Important:</strong> Please remember this password. There is no way to recover it if forgotten.
+                </p>
+              </div>
+            </>
           )}
         </div>
 
@@ -173,7 +284,12 @@ export default function LockDialog({ open, onOpenChange, mode = "verify" }: Lock
             Cancel
           </Button>
           <Button
-            onClick={handleSubmit}
+            onClick={async () => {
+              await handleSubmit();
+              if (mode === "set" && enableBiometric && biometricSupported && user) {
+                await handleSetupBiometric();
+              }
+            }}
             disabled={loading || !password.trim()}
             className="flex-1"
           >
