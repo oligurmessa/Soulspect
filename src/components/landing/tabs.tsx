@@ -4,7 +4,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { useState, useRef, useEffect } from "react"
 
-const tabs = ["Features", "Analytics", "Soulspace", "Purpose Compass", "Pricing", "About"]
+const tabs = ["Features", "Analytics", "Soulspace", "Pricing", "About"]
 
 export default function Frame() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)

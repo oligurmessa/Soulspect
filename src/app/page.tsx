@@ -83,10 +83,6 @@ const features = [
     title: "Release & Reset",
     description: "Let go of limiting beliefs and negative patterns.",
   },
-  {
-    title: "Purpose Compass",
-    description: "Align your actions with your deepest values and purpose.",
-  },
 ];
 
 // Example socialLinks array

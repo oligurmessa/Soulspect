@@ -10,18 +10,19 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { motion } from "framer-motion"
 import EmotionVisualizer from "@/components/EmotionsVisualizer";
-import EmotionSelector from "./EmotionSelector";
 import { useAuth } from "@/context/AuthContext"
 import { addEmotionLog } from "@/lib/dbHelpers"
+import Selector from "./EmotionSelector"
 
 interface EmotionLogDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onEmotionLogged?: (emotion: string, intensity: number, context?: string) => void
 }
 
 const triggers = ["Work", "Family", "Social", "Health", "Financial", "Relationship", "Personal Growth", "Other"]
 
-export function EmotionLogDrawer({ open, onOpenChange }: EmotionLogDrawerProps) {
+export function EmotionLogDrawer({ open, onOpenChange, onEmotionLogged }: EmotionLogDrawerProps) {
   const [step, setStep] = useState<"visualize" | "selector" | "context" | "notes" | "triggers" | "complete">("visualize")
   const [mood, setMood] = useState(3) // 0-6 scale from EmotionVisualizer
   const [selectedEmotions, setSelectedEmotions] = useState<string[]>([])
@@ -64,6 +65,13 @@ export function EmotionLogDrawer({ open, onOpenChange }: EmotionLogDrawerProps) 
         title: "Success!",
         description: "Your emotion log has been saved.",
       })
+
+      // Call the callback to add to carousel
+      if (onEmotionLogged && selectedEmotions.length > 0) {
+        const primaryEmotion = selectedEmotions[0] // Use the first selected emotion
+        const intensity = Math.round(((mood + 1) / 7) * 10) // Convert 0-6 to 1-10 scale
+        onEmotionLogged(primaryEmotion, intensity, context || undefined)
+      }
 
       resetForm()
       onOpenChange(false)
@@ -135,7 +143,7 @@ export function EmotionLogDrawer({ open, onOpenChange }: EmotionLogDrawerProps) 
 
               {/* MODIFIED: This wrapper centers the content vertically and allows scrolling if needed. */}
               <div className="w-full flex-1 overflow-y-auto flex justify-center items-center">
-                <EmotionSelector onEmotionsChange={setSelectedEmotions} />
+          <Selector variant="emotion" onChange={(selected) => console.log("Emotions:", selected)} />
               </div>
             </motion.div>
           )}
@@ -178,44 +186,22 @@ export function EmotionLogDrawer({ open, onOpenChange }: EmotionLogDrawerProps) 
                 <div className="flex-1">
                   <DrawerTitle className="text-white/90 text-xl font-light">What triggered this?</DrawerTitle>
                   <DrawerDescription className="text-white/60 text-sm mt-1">
-                    Select any triggers that apply (optional).
+                    Select any triggers that apply.
                   </DrawerDescription>
                 </div>
                 <Button
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="ml-6 px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white border border-green-500 rounded-xl transition-all duration-200 disabled:opacity-50"
+                  className="ml-6 px-6 py-2.5 bg-zinc-100/20 hover:bg-zinc-100/30 text-zinc-100 border border-white/20 rounded-xl transition-all duration-200 disabled:opacity-50"
+
+
                 >
                   {isSubmitting ? "Saving..." : "Save"}
                 </Button>
               </DrawerHeader>
+<Selector variant="trigger" onChange={(selected) => console.log("Triggers:", selected)} />
 
-              <div className="flex-1 flex flex-col px-4 pb-6">
-                <div className="grid grid-cols-2 gap-3 mt-4">
-                  {triggers.map((trigger) => (
-                    <div key={trigger} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={trigger}
-                        checked={selectedTriggers.includes(trigger)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedTriggers([...selectedTriggers, trigger])
-                          } else {
-                            setSelectedTriggers(selectedTriggers.filter(t => t !== trigger))
-                          }
-                        }}
-                        className="border-white/20 data-[state=checked]:bg-white/20 data-[state=checked]:border-white/30"
-                      />
-                      <Label
-                        htmlFor={trigger}
-                        className="text-white/80 text-sm font-medium cursor-pointer"
-                      >
-                        {trigger}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+       
             </motion.div>
           )}
 

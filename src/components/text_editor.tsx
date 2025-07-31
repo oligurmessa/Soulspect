@@ -1,13 +1,12 @@
 "use client"
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { LexicalComposer } from '@lexical/react/LexicalComposer'
 import { PlainTextPlugin } from '@lexical/react/LexicalPlainTextPlugin'
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin'
 import { ContentEditable } from '@lexical/react/LexicalContentEditable'
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin'
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin'
-import { AutoFocusPlugin } from '@lexical/react/LexicalAutoFocusPlugin'
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary'
 import { ListPlugin } from '@lexical/react/LexicalListPlugin'
 import { LinkPlugin } from '@lexical/react/LexicalLinkPlugin'
@@ -256,7 +255,11 @@ const editorConfig = {
   },
 }
 
-export default function TextEditor() {
+interface TextEditorProps {
+  skipLocalStorageLoad?: boolean;
+}
+
+export default function TextEditor({ skipLocalStorageLoad = false }: TextEditorProps) {
   const [editorState, setEditorState] = useState<string>('')
   const [editor] = useLexicalComposerContext()
   const editorRef = useRef<HTMLDivElement>(null)
@@ -375,8 +378,10 @@ export default function TextEditor() {
     return () => clearTimeout(handler)
   }, [editorState])
 
-  // Load saved state on mount
+  // Load saved state on mount (only if not skipping localStorage load)
   useEffect(() => {
+    if (skipLocalStorageLoad) return;
+    
     try {
       const savedState = localStorage.getItem('journal-editor-state')
       if (savedState && editor) {
@@ -386,7 +391,7 @@ export default function TextEditor() {
     } catch (error) {
       console.error('Failed to load saved editor state:', error)
     }
-  }, [editor])
+  }, [editor, skipLocalStorageLoad])
 
   return (
     <div className="min-h-full px-4 pt-2">
@@ -471,6 +476,14 @@ export default function TextEditor() {
   )
 }
 
+// Helper function to create initial editor state
+function createInitialEditorState(content: string) {
+  const root = $createParagraphNode();
+  const textNode = $createTextNode(content);
+  root.append(textNode);
+  return root;
+}
+
 // Wrapper component to provide Lexical context
 interface TextEditorWrapperProps {
   content?: string;
@@ -478,23 +491,263 @@ interface TextEditorWrapperProps {
 }
 
 export function TextEditorWrapper({ content, onContentChange }: TextEditorWrapperProps) {
-  const handleChange = useCallback((editorState: any) => {
-    const textContent = editorState.read(() => $getRoot().getTextContent());
-    if (onContentChange) {
-      onContentChange(textContent);
+  console.log('TextEditorWrapper: Received content prop:', content);
+  
+  const initialConfig = useMemo(() => {
+    console.log('Creating initialConfig with content:', content);
+    return {
+      ...editorConfig,
+      editorState: content ? () => {
+        console.log('initialEditorState function executing with:', content);
+        const root = $getRoot();
+        root.clear();
+        const paragraph = $createParagraphNode();
+        const textNode = $createTextNode(content);
+        paragraph.append(textNode);
+        root.append(paragraph);
+        console.log('Created initial state with proper structure');
+      } : undefined
+    };
+  }, []); // Remove content from dependencies to prevent unnecessary re-initialization
+  
+  return (
+    <LexicalComposer initialConfig={initialConfig}>
+      <TextEditorContent 
+        skipLocalStorageLoad={!!content} 
+        onContentChange={onContentChange}
+        initialContent={content}
+      />
+    </LexicalComposer>
+  )
+}
+
+// Separate component that contains all the editor functionality
+function TextEditorContent({ skipLocalStorageLoad, onContentChange, initialContent }: { skipLocalStorageLoad: boolean; onContentChange?: (content: string) => void; initialContent?: string }) {
+  const [editor] = useLexicalComposerContext()
+  const editorRef = useRef<HTMLDivElement>(null)
+  const isInitialLoad = useRef(true)
+
+  // Load saved state on mount (only if not skipping localStorage load)
+  useEffect(() => {
+    if (skipLocalStorageLoad) return;
+    
+    try {
+      const savedState = localStorage.getItem('journal-editor-state')
+      if (savedState && editor) {
+        const parsedState = JSON.parse(savedState)
+        editor.setEditorState(editor.parseEditorState(parsedState))
+      }
+    } catch (error) {
+      console.error('Failed to load saved editor state:', error)
     }
-  }, [onContentChange]);
+  }, [editor, skipLocalStorageLoad])
+
+  // Setup onChange handler - stable reference, no re-renders
+  useEffect(() => {
+    if (!onContentChange) return;
+
+    let timeoutId: NodeJS.Timeout;
+    
+    const removeListener = editor.registerUpdateListener(({ editorState }) => {
+      // Skip initial load to prevent triggering onChange on mount
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        return;
+      }
+      
+      // Debounce to prevent rapid updates
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        editorState.read(() => {
+          const textContent = $getRoot().getTextContent();
+          console.log('onChange firing with content:', textContent);
+          onContentChange(textContent);
+        });
+      }, 100);
+    });
+
+    return () => {
+      clearTimeout(timeoutId);
+      removeListener();
+    };
+  }, [editor, onContentChange]); // Remove complex dependencies
+
+  // Slash command definitions
+  const slashCommands: Matcher[] = [
+    {
+      command: 'h1',
+      description: 'Large heading',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const headingNode = $createHeadingNode('h1')
+            $insertNodes([headingNode])
+          }
+        })
+      }
+    },
+    {
+      command: 'h2',
+      description: 'Medium heading',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const headingNode = $createHeadingNode('h2')
+            $insertNodes([headingNode])
+          }
+        })
+      }
+    },
+    {
+      command: 'h3',
+      description: 'Small heading',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const headingNode = $createHeadingNode('h3')
+            $insertNodes([headingNode])
+          }
+        })
+      }
+    },
+    {
+      command: 'quote',
+      description: 'Quote block',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const quoteNode = $createQuoteNode()
+            $insertNodes([quoteNode])
+          }
+        })
+      }
+    },
+    {
+      command: 'ul',
+      description: 'Bullet list',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const listNode = $createListNode('bullet')
+            const listItemNode = $createListItemNode()
+            listItemNode.append($createTextNode(''))
+            listNode.append(listItemNode)
+            $insertNodes([listNode])
+          }
+        })
+      }
+    },
+    {
+      command: 'ol',
+      description: 'Numbered list',
+      insert: () => {
+        editor.update(() => {
+          const selection = $getSelection()
+          if ($isRangeSelection(selection)) {
+            const listNode = $createListNode('number')
+            const listItemNode = $createListItemNode()
+            listItemNode.append($createTextNode(''))
+            listNode.append(listItemNode)
+            $insertNodes([listNode])
+          }
+        })
+      }
+    },
+  ]
 
   return (
-    <LexicalComposer initialConfig={editorConfig}>
-      <TextEditor />
+    <>
+      <div className="min-h-full px-4 pt-2">
+        {/* Floating toolbar appears on text selection */}
+        <FloatingTextFormatToolbar />
+        
+        {/* Slash command menu triggered by '/' */}
+        <SlashCommandMenuPlugin matchers={slashCommands} />
+
+        <div className="flex flex-col h-full w-full">
+          {/* Mobile toolbar (bottom) */}
+          <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 p-3 flex justify-around items-center z-40">
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => editor.dispatchCommand('bold' as any, undefined)}
+            >
+              <strong className="text-gray-700 dark:text-gray-300">B</strong>
+            </button>
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => editor.dispatchCommand('italic' as any, undefined)}
+            >
+              <em className="text-gray-700 dark:text-gray-300">I</em>
+            </button>
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => {
+                editor.update(() => {
+                  const selection = $getSelection()
+                  if ($isRangeSelection(selection)) {
+                    const listNode = $createListNode('bullet')
+                    const listItemNode = $createListItemNode()
+                    listItemNode.append($createTextNode(''))
+                    listNode.append(listItemNode)
+                    $insertNodes([listNode])
+                  }
+                })
+              }}
+            >
+              <span className="text-gray-700 dark:text-gray-300">•</span>
+            </button>
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              onClick={() => {
+                editor.update(() => {
+                  const selection = $getSelection()
+                  if ($isRangeSelection(selection)) {
+                    const headingNode = $createHeadingNode('h2')
+                    $insertNodes([headingNode])
+                  }
+                })
+              }}
+            >
+              <span className="text-gray-700 dark:text-gray-300 font-semibold">H</span>
+            </button>
+          </div>
+
+          {/* Editor area */}
+          <div
+            ref={editorRef}
+            className="flex-1 overflow-y-auto p-6 md:p-12 bg-background pb-20 md:pb-6"
+          >
+            <div className="max-w-4xl mx-auto h-full flex items-center justify-center">
+              <RichTextPlugin
+                contentEditable={
+                  <ContentEditable
+                    className="min-h-[400px] w-full outline-none prose prose-lg max-w-none focus:outline-none"
+                    style={{ caretColor: '#3B82F6' }}
+                  />
+                }
+                placeholder={
+                  <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 italic pointer-events-none">
+                    Start writing your thoughts... Use "/" for commands
+                  </div>
+                }
+                ErrorBoundary={LexicalErrorBoundary}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Plugins */}
       <HistoryPlugin />
-      <AutoFocusPlugin />
-      <OnChangePlugin onChange={handleChange} />
       <ListPlugin />
       <LinkPlugin />
       <AutoLinkPlugin matchers={[]} />
       <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-    </LexicalComposer>
-  )
+    </>
+  );
 }

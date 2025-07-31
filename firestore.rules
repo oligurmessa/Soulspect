@@ -15,12 +15,19 @@ service cloud.firestore {
     }
     
     function isValidEmotionLog(logData) {
-      return logData.keys().hasAll(['userId', 'mood', 'emotions', 'createdAt', 'updatedAt']) &&
+      let requiredFields = ['userId', 'mood', 'emotions', 'createdAt', 'updatedAt'];
+      let allowedFields = ['userId', 'mood', 'emotions', 'triggers', 'context', 'intensity', 'createdAt', 'updatedAt'];
+      
+      return logData.keys().hasAll(requiredFields) &&
+             logData.keys().hasOnly(allowedFields) &&
              logData.mood is number &&
              logData.mood >= 0 &&
              logData.mood <= 6 &&
              logData.emotions is list &&
-             logData.emotions.size() <= 10;
+             logData.emotions.size() <= 10 &&
+             (!logData.keys().hasAny(['triggers']) || logData.triggers is list) &&
+             (!logData.keys().hasAny(['context']) || logData.context is string) &&
+             (!logData.keys().hasAny(['intensity']) || (logData.intensity is number && logData.intensity >= 1 && logData.intensity <= 10));
     }
     
     function isValidJournalEntry(entryData) {
@@ -69,17 +76,6 @@ service cloud.firestore {
                          request.resource.data.values is list;
       }
       
-      // Compass entries subcollection
-      match /compass/{direction} {
-        allow read, write: if isOwner(userId);
-        allow create: if isOwner(userId) && 
-                         request.resource.data.keys().hasAll(['userId', 'direction', 'goals', 'progress', 'createdAt', 'updatedAt']) &&
-                         request.resource.data.direction in ['north', 'south', 'east', 'west'] &&
-                         request.resource.data.goals is list &&
-                         request.resource.data.progress is number &&
-                         request.resource.data.progress >= 0 &&
-                         request.resource.data.progress <= 100;
-      }
       
       // Soulspace items subcollection
       match /soulspaceItems/{itemId} {

@@ -3,7 +3,7 @@ import {
   getDocs, query, orderBy, serverTimestamp, where,
   updateDoc, deleteDoc, limit, Timestamp
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, refFromURL, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "./firebase";
 
 /* ---------- TYPES ---------- */
@@ -47,6 +47,31 @@ export interface JournalEntry {
   date: Timestamp;         // Entry date (can be different from created)
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  carouselContent?: {
+    photos: {
+      id: string | number;
+      name: string;
+      caption: string;
+      url: string;
+      createdAt: string;
+    }[];
+    emotions: {
+      id: string | number;
+      emotion: string;
+      intensity: number;
+      note: string;
+      emotions: string[];
+      triggers: string[];
+      createdAt: string;
+    }[];
+    audioRecordings: {
+      id: string | number;
+      transcript: string;
+      duration: number;
+      createdAt: string;
+      audioUrl?: string;
+    }[];
+  };
 }
 
 export interface SoulWorkExercise {
@@ -73,16 +98,6 @@ export interface UserValues {
   updatedAt: Timestamp;
 }
 
-export interface CompassEntry {
-  id?: string;
-  userId: string;
-  direction: 'north' | 'south' | 'east' | 'west';  // Life areas
-  goals: string[];
-  progress: number;        // 0-100
-  notes?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
 
 export interface SoulspaceItem {
   id?: string;
@@ -272,23 +287,6 @@ export const getUserValues = async (uid: string) => {
   return null;
 };
 
-/* ---------- COMPASS ENTRIES CRUD ---------- */
-export const saveCompassEntry = async (uid: string, direction: CompassEntry['direction'], data: Omit<CompassEntry, 'id' | 'userId' | 'direction' | 'createdAt' | 'updatedAt'>) => {
-  const compassRef = doc(db, "users", uid, "compass", direction);
-  return setDoc(compassRef, {
-    ...data,
-    userId: uid,
-    direction,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
-};
-
-export const getCompassEntries = async (uid: string) => {
-  const compassQuery = query(collection(db, "users", uid, "compass"));
-  const snapshot = await getDocs(compassQuery);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompassEntry));
-};
 
 /* ---------- SOULSPACE ITEMS CRUD ---------- */
 export const addSoulspaceItem = async (uid: string, data: Omit<SoulspaceItem, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
@@ -425,11 +423,10 @@ export const getAnalytics = async (uid: string, period: 'daily' | 'weekly' | 'mo
 export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json') => {
   try {
     // Get all user data
-    const [emotionLogs, journalEntries, userValues, compassEntries, soulWorkExercises, analytics] = await Promise.all([
+    const [emotionLogs, journalEntries, userValues, soulWorkExercises, analytics] = await Promise.all([
       getEmotionLogs(uid, 1000),
       getJournalEntries(uid, 1000),
       getUserValues(uid),
-      getCompassEntries(uid),
       getSoulWorkExercises(uid, 1000),
       getAnalytics(uid, 'weekly', 100)
     ]);
@@ -454,11 +451,6 @@ export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json
           createdAt: userValues.createdAt.toDate().toISOString(),
           updatedAt: userValues.updatedAt.toDate().toISOString()
         } : null,
-        compassEntries: compassEntries.map(entry => ({
-          ...entry,
-          createdAt: entry.createdAt.toDate().toISOString(),
-          updatedAt: entry.updatedAt.toDate().toISOString()
-        })),
         soulWorkExercises: soulWorkExercises.map(exercise => ({
           ...exercise,
           completedAt: exercise.completedAt.toDate().toISOString(),
@@ -474,7 +466,6 @@ export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json
         totalEmotionLogs: emotionLogs.length,
         totalJournalEntries: journalEntries.length,
         totalValues: userValues?.values?.length || 0,
-        totalCompassEntries: compassEntries.length,
         totalSoulWorkExercises: soulWorkExercises.length,
         totalAnalytics: analytics.length
       }
@@ -516,7 +507,7 @@ export const downloadExportData = (data: string, filename: string, format: 'json
 };
 
 /* ---------- FILE UPLOAD HELPERS ---------- */
-export const uploadJournalFile = async (uid: string, file: Blob, entryId: string, fileType: 'voice' | 'video'): Promise<string> => {
+export const uploadJournalFile = async (uid: string, file: Blob, entryId: string, fileType: 'voice' | 'video' | string): Promise<string> => {
   try {
     const timestamp = Date.now();
     const fileExtension = fileType === 'voice' ? 'webm' : 'webm';
@@ -529,6 +520,55 @@ export const uploadJournalFile = async (uid: string, file: Blob, entryId: string
     return downloadURL;
   } catch (error) {
     console.error('Error uploading file:', error);
+    throw error;
+  }
+};
+
+export const uploadJournalImage = async (uid: string, imageDataUrl: string, entryId: string, imageName: string): Promise<string> => {
+  try {
+    // Convert data URL to blob
+    const response = await fetch(imageDataUrl);
+    const blob = await response.blob();
+    
+    const timestamp = Date.now();
+    const fileExtension = imageName.split('.').pop() || 'jpg';
+    const filePath = `users/${uid}/journals/${entryId}/image_${timestamp}.${fileExtension}`;
+    
+    const storageRef = ref(storage, filePath);
+    const uploadResult = await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(uploadResult.ref);
+    
+    return downloadURL;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+};
+
+export const uploadImageFile = async (uid: string, file: File, entryId: string): Promise<string> => {
+  try {
+    console.log('uploadImageFile called with:', { uid, fileName: file.name, fileSize: file.size, entryId });
+    
+    // Use the same pattern as uploadJournalFile which works for voice uploads
+    const timestamp = Date.now();
+    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const filePath = `users/${uid}/journals/${entryId}/image_${timestamp}.${fileExtension}`;
+    console.log('Storage path:', filePath);
+    
+    const storageRef = ref(storage, filePath);
+    console.log('Uploading to Firebase Storage...');
+    const uploadResult = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(uploadResult.ref);
+    console.log('Download URL obtained:', downloadURL);
+    
+    return downloadURL;
+  } catch (error: any) {
+    console.error('Error uploading image file:', error);
+    console.error('Error details:', {
+      code: error.code,
+      message: error.message,
+      serverResponse: error.serverResponse
+    });
     throw error;
   }
 };
@@ -547,7 +587,7 @@ export const deleteJournalFile = async (fileUrl: string): Promise<void> => {
 export const saveJournalEntryWithFiles = async (
   uid: string, 
   entryData: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
-  files?: { voiceBlob?: Blob; videoBlob?: Blob }
+  files?: { voiceBlob?: Blob; videoBlob?: Blob; audioBlobs?: { id: string | number; blob: Blob }[] }
 ): Promise<string> => {
   try {
     // First create the journal entry to get an ID
@@ -567,11 +607,35 @@ export const saveJournalEntryWithFiles = async (
       attachmentUrls.push(videoUrl);
     }
     
-    // Update the entry with attachment URLs if any files were uploaded
+    // Upload audio recordings from carousel
+    if (files?.audioBlobs && files.audioBlobs.length > 0) {
+      for (const audioFile of files.audioBlobs) {
+        const audioUrl = await uploadJournalFile(uid, audioFile.blob, entryId, `audio_${audioFile.id}`);
+        attachmentUrls.push(audioUrl);
+        
+        // Update the carousel content with the uploaded URL
+        if (entryData.carouselContent?.audioRecordings) {
+          const audioIndex = entryData.carouselContent.audioRecordings.findIndex(
+            audio => audio.id === audioFile.id
+          );
+          if (audioIndex !== -1) {
+            entryData.carouselContent.audioRecordings[audioIndex].audioUrl = audioUrl;
+          }
+        }
+      }
+    }
+    
+    // Update the entry with attachment URLs and carousel content if any files were uploaded
+    const updateData: any = {};
     if (attachmentUrls.length > 0) {
-      await updateJournalEntry(uid, entryId, { 
-        attachments: attachmentUrls 
-      });
+      updateData.attachments = attachmentUrls;
+    }
+    if (entryData.carouselContent) {
+      updateData.carouselContent = entryData.carouselContent;
+    }
+    
+    if (Object.keys(updateData).length > 0) {
+      await updateJournalEntry(uid, entryId, updateData);
     }
     
     return entryId;
@@ -581,127 +645,91 @@ export const saveJournalEntryWithFiles = async (
   }
 };
 
-// Function to add a goal log - integrates with compass system
-export const addGoalLog = async (uid: string, goalData: {
-  goalTitle: string;
-  goalType: string;  
-  whyMatters?: string;
-  deadline?: string;
-  progress: number;
-}) => {
+
+/* ---------- DRAFT-FIRST JOURNAL SYSTEM ---------- */
+
+// Create initial draft entry when user starts typing/adding content
+export const createDraftEntry = async (userId: string, initialData: Partial<JournalEntry> = {}) => {
   try {
-    // Get existing compass entries
-    const compassEntries = await getCompassEntries(uid);
-    let goalsEntry = compassEntries.find(entry => entry.direction === 'south');
-    
-    // Parse existing goals or create empty array
-    let existingGoals = [];
-    if (goalsEntry && goalsEntry.notes) {
-      try {
-        existingGoals = JSON.parse(goalsEntry.notes);
-      } catch (e) {
-        console.warn('Could not parse existing goals data');
-      }
-    }
-    
-    // Create new goal object
-    const newGoal = {
-      id: Date.now().toString(),
-      name: goalData.goalTitle,
-      description: goalData.whyMatters || '',
-      type: goalData.goalType === 'Short-Term' ? 'short-term' : 'long-term',
-      progress: goalData.progress,
-      priority: 'Medium',
-      targetDeadline: goalData.deadline || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString().split('T')[0],
-      milestones: [],
-      category: 'Personal'
-    };
-    
-    // Add to existing goals
-    const updatedGoals = [...existingGoals, newGoal];
-    
-    // Save back to compass entry
-    await saveCompassEntry(uid, 'south', {
-      goals: [],
-      progress: 0,
-      notes: JSON.stringify(updatedGoals)
+    const docRef = await addDoc(collection(db, 'users', userId, 'journalEntries'), {
+      userId,
+      title: initialData.title || "",
+      content: initialData.content || "",
+      entryType: initialData.entryType || 'text',
+      isDraft: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      date: initialData.date || serverTimestamp(),
+      attachments: [],
+      carouselContent: {
+        photos: [],
+        emotions: [],
+        audioRecordings: []
+      },
+      ...initialData
     });
     
-    return newGoal.id;
+    console.log('Draft entry created:', docRef.id);
+    return docRef.id;
   } catch (error) {
-    console.error('Error adding goal log:', error);
+    console.error('Error creating draft entry:', error);
     throw error;
   }
 };
 
-// Function to add a habit log - integrates with compass system
-export const addHabitLog = async (uid: string, habitData: {
-  habitTitle: string;
-  habitType: string;
-  description?: string;
-  whyMatters?: string;
-  frequency?: string;
-  timeOfDay?: string;
-  startDate?: string;
-  streakGoal?: number;
-  triggerPattern?: string;
-  whyQuit?: string;
-  currentFrequency?: string;
-  replacementHabit?: string;
-  awarenessNudges?: boolean;
-}) => {
+// Auto-save changes to existing draft
+export const autosaveEntry = async (userId: string, entryId: string, updates: Partial<JournalEntry>) => {
   try {
-    // Get existing compass entries
-    const compassEntries = await getCompassEntries(uid);
-    let habitsEntry = compassEntries.find(entry => entry.direction === 'north');
-    
-    // Parse existing habits or create empty array
-    let existingHabits = [];
-    if (habitsEntry && habitsEntry.notes) {
-      try {
-        existingHabits = JSON.parse(habitsEntry.notes);
-      } catch (e) {
-        console.warn('Could not parse existing habits data');
-      }
-    }
-    
-    // Create new habit object
-    const newHabit = {
-      id: Date.now().toString(),
-      name: habitData.habitTitle,
-      description: habitData.description || '',
-      type: habitData.habitType === 'Build' ? 'build' : 'break',
-      recurrence: habitData.frequency || 'Daily',
-      streak: 0,
-      lastLogged: 'Never',
-      progressStatus: 'New',
-      weeklyProgress: [0, 0, 0, 0, 0, 0, 0],
-      // Additional fields from the detailed habit drawer
-      whyMatters: habitData.whyMatters,
-      timeOfDay: habitData.timeOfDay,
-      startDate: habitData.startDate,
-      streakGoal: habitData.streakGoal,
-      triggerPattern: habitData.triggerPattern,
-      whyQuit: habitData.whyQuit,
-      currentFrequency: habitData.currentFrequency,
-      replacementHabit: habitData.replacementHabit,
-      awarenessNudges: habitData.awarenessNudges
-    };
-    
-    // Add to existing habits
-    const updatedHabits = [...existingHabits, newHabit];
-    
-    // Save back to compass entry
-    await saveCompassEntry(uid, 'north', {
-      goals: [],
-      progress: 0,
-      notes: JSON.stringify(updatedHabits)
+    const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
     });
     
-    return newHabit.id;
+    console.log('Entry autosaved:', entryId);
   } catch (error) {
-    console.error('Error adding habit log:', error);
+    console.error('Error autosaving entry:', error);
+    throw error;
+  }
+};
+
+// Finalize draft (mark as published)
+export const finalizeDraft = async (userId: string, entryId: string) => {
+  try {
+    const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
+    await updateDoc(docRef, {
+      isDraft: false,
+      updatedAt: serverTimestamp()
+    });
+    
+    console.log('Draft finalized:', entryId);
+  } catch (error) {
+    console.error('Error finalizing draft:', error);
+    throw error;
+  }
+};
+
+// Load entry for editing (works for both drafts and published entries)
+export const loadEntryForEdit = async (userId: string, entryId: string): Promise<JournalEntry | null> => {
+  try {
+    const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      console.warn('Entry not found:', entryId);
+      return null;
+    }
+    
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      ...data,
+      date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+      updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt)
+    } as JournalEntry;
+  } catch (error) {
+    console.error('Error loading entry for edit:', error);
     throw error;
   }
 };

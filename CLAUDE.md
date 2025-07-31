@@ -62,7 +62,6 @@ This is a Next.js 15 application for emotion logging and tracking called "soulsp
 - Responsive design with mobile support
 - Analytics (Self-Discovery)
 - Soulspace (Inner Transformation) Three main features: Explore Subconscious. Release & Reset. Make a Decision.
-- Purpose Compass (Life Alignment)
 
 
 ### Development Notes

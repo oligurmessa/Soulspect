@@ -28,7 +28,6 @@ const navMain = [
   { title: "Journal", href: "/dashboard/journal", icon: "book_2" },
   { title: "Analytics", href: "/dashboard/analytics", icon: "chart_data" },
   { title: "Soulspace", href: "/dashboard/soulspace", icon: "splitscreen_left" },
-  { title: "Purpose Compass", href: "/dashboard/compass", icon: "explore" },
 ];
 
 export function AppSidebar() {

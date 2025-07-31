@@ -1,46 +1,96 @@
-// src/components/EmotionSelector.tsx
+
 "use client"
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Check } from 'lucide-react'
 
+const triggers = [
+  "Health",
+  "Fitness",
+  "Self-Care",
+  "Hobbies",
+  "Identity",
+  "Spirituality",
+  "Community",
+  "Family",
+  "Friends",
+  "Partner",
+  "Dating",
+  "Duties",
+  "Work",
+  "Education",
+  "Travel",
+  "Weather",
+  "Recent Events",
+  "Finances",
+];
+
 const emotions = [
   "Happy",
   "Sad",
   "Angry",
-  "Excited",
   "Anxious",
-  "Relaxed",
-  "Confused",
-  "Bored",
-  "Curious",
+  "Calm",
+  "Confident",
+  "Excited",
   "Grateful",
-]
+  "Lonely",
+  "Proud",
+  "Stressed",
+  "Hopeful",
+];
 
-// MODIFIED: Renamed component to PascalCase for React standards.
-interface EmotionSelectorProps {
-  onEmotionsChange?: (emotions: string[]) => void;
+const moreEmotions = [
+  "Amazed",
+  "Amused",
+  "Annoyed",
+  "Ashamed",
+  "Brave",
+  "Content",
+  "Disappointed",
+  "Discouraged",
+  "Disgusted",
+  "Drained",
+  "Embarrassed",
+  "Frustrated",
+  "Guilty",
+  "Hopeless",
+  "Indifferent",
+  "Irritated",
+  "Jealous",
+  "Joyful",
+  "Overwhelmed",
+  "Passionate",
+  "Peaceful",
+  "Relieved",
+  "Satisfied",
+  "Scared",
+  "Surprised",
+  "Worried",
+];
+interface SelectorProps {
+  variant: "emotion" | "trigger";
+  onChange?: (items: string[]) => void;
 }
 
-export default function EmotionSelector({ onEmotionsChange }: EmotionSelectorProps) {
-  const [selected, setSelected] = useState<string[]>([])
+export default function Selector({ variant, onChange }: SelectorProps) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const options = variant === "emotion" ? emotions : triggers;
 
-  const toggleemotion = (emotion: string) => {
-    const newSelected = selected.includes(emotion) 
-      ? selected.filter((c) => c !== emotion) 
-      : [...selected, emotion];
+  const toggleItem = (item: string) => {
+    const newSelected = selected.includes(item)
+      ? selected.filter((c) => c !== item)
+      : [...selected, item];
     setSelected(newSelected);
-    onEmotionsChange?.(newSelected);
-  }
+    onChange?.(newSelected);
+  };
 
-  // MODIFIED: Removed full-screen container classes (e.g., min-h-screen, bg-black, p-6, pt-40) to allow embedding in the drawer.
   return (
     <div className="w-full">
-      {/* REMOVED: The original h1 header is removed because the drawer now provides its own header for this step. */}
       <div className="max-w-[570px] mx-auto">
         <motion.div
-          className="flex flex-wrap justify-center gap-3 overflow-visible" // MODIFIED: Added justify-center for better alignment.
+          className="flex flex-wrap justify-center gap-3 overflow-visible"
           layout
           transition={{
             type: "spring",
@@ -49,12 +99,12 @@ export default function EmotionSelector({ onEmotionsChange }: EmotionSelectorPro
             mass: 0.5,
           }}
         >
-          {emotions.map((emotion) => {
-            const isSelected = selected.includes(emotion)
+          {options.map((item) => {
+            const isSelected = selected.includes(item);
             return (
               <motion.button
-                key={emotion}
-                onClick={() => toggleemotion(emotion)}
+                key={item}
+                onClick={() => toggleItem(item)}
                 layout
                 initial={false}
                 animate={{
@@ -92,7 +142,7 @@ export default function EmotionSelector({ onEmotionsChange }: EmotionSelectorPro
                     duration: 0.3,
                   }}
                 >
-                  <span>{emotion}</span>
+                  <span>{item}</span>
                   <AnimatePresence>
                     {isSelected && (
                       <motion.span
@@ -103,7 +153,7 @@ export default function EmotionSelector({ onEmotionsChange }: EmotionSelectorPro
                           type: "spring",
                           stiffness: 500,
                           damping: 30,
-                          mass: 0.5
+                          mass: 0.5,
                         }}
                         className="absolute right-0"
                       >
@@ -115,10 +165,10 @@ export default function EmotionSelector({ onEmotionsChange }: EmotionSelectorPro
                   </AnimatePresence>
                 </motion.div>
               </motion.button>
-            )
+            );
           })}
         </motion.div>
       </div>
     </div>
-  )
+  );
 }

@@ -46,11 +46,6 @@ export function FeaturesSectionWithHoverEffects() {
       description: "Let go of limiting beliefs and negative patterns.",
       icon: <Rocket className="w-8 h-8" />,
     },
-    {
-      title: "Purpose Compass",
-      description: "Align your actions with your deepest values and purpose.",
-      icon: <Crosshair className="w-8 h-8" />,
-    },
   ];
 
   return (
