@@ -69,7 +69,7 @@ export default function JournalPage() {
       // Set basic form data
       setTitle(entry.title || "untitled");
       setContent(entry.content || "");
-      setSelectedDate(entry.date || new Date());
+      setSelectedDate(entry.date instanceof Date ? entry.date : entry.date?.toDate?.() || new Date());
       setSelectedMode(entry.entryType === 'video' ? 'Video' : 'Type');
       setIsEditing(true);
       setEditingEntryId(entry.id!);
@@ -88,7 +88,7 @@ export default function JournalPage() {
       }
       
       // Handle video file if present
-      if (entry.entryType === 'video' && entry.attachments?.length > 0) {
+      if (entry.entryType === 'video' && entry.attachments && entry.attachments.length > 0) {
         const videoUrl = entry.attachments.find((url: string) => url.includes('video_'));
         if (videoUrl) {
           try {

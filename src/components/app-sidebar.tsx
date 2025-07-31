@@ -20,6 +20,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
 } from "./ui/dropdown-menu";
+import { useState } from "react";
+import SettingsModal from "./SettingsModal";
 
 // Main navigation with Material Symbols icons
 const navMain = [
@@ -34,6 +36,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <Sidebar
@@ -124,34 +127,28 @@ export function AppSidebar() {
       {/* Sidebar Footer with Settings and Help */}
       <SidebarFooter className="p-2 mt-auto">
         <SidebarMenu>
-          {/* Settings dropdown */}
+          {/* Settings button */}
           <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  tooltip="Settings"
-                  className="sidebar-menu-button mb-1"
-                >
-                  <div className={cn(
-                    "flex items-center transition-all duration-200 rounded-lg",
-                    isCollapsed
-                      ? "justify-center w-12 h-12 p-0"
-                      : "justify-start gap-3 px-3 py-2 w-full"
-                  )}>
-                    <span className="material-symbols-outlined text-2xl flex-shrink-0">settings</span>
-                    <span className={cn(
-                      "transition-all duration-200 overflow-hidden whitespace-nowrap",
-                      isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-                    )}>
-                      Settings
-                    </span>
-                  </div>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start">
-                <ThemeToggle />
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <SidebarMenuButton
+              onClick={() => setSettingsOpen(true)}
+              tooltip="Settings"
+              className="sidebar-menu-button mb-1"
+            >
+              <div className={cn(
+                "flex items-center transition-all duration-200 rounded-lg",
+                isCollapsed
+                  ? "justify-center w-12 h-12 p-0"
+                  : "justify-start gap-3 px-3 py-2 w-full"
+              )}>
+                <span className="material-symbols-outlined text-2xl flex-shrink-0">settings</span>
+                <span className={cn(
+                  "transition-all duration-200 overflow-hidden whitespace-nowrap",
+                  isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                )}>
+                  Settings
+                </span>
+              </div>
+            </SidebarMenuButton>
           </SidebarMenuItem>
           {/* Help link */}
           <SidebarMenuItem>
@@ -181,6 +178,9 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      
+      {/* Settings Modal */}
+      <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Sidebar>
   );
 }

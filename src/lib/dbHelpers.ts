@@ -3,7 +3,7 @@ import {
   getDocs, query, orderBy, serverTimestamp, where,
   updateDoc, deleteDoc, limit, Timestamp
 } from "firebase/firestore";
-import { ref, refFromURL, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "./firebase";
 
 /* ---------- TYPES ---------- */
@@ -18,6 +18,22 @@ export interface User {
     timezone?: string;
     notifications?: boolean;
     theme?: 'light' | 'dark' | 'system';
+    language?: string;
+    startWeekOn?: boolean;
+    autoTimezone?: boolean;
+    emailNotifications?: boolean;
+    soundEnabled?: boolean;
+    volume?: number;
+    fontSize?: string;
+    reducedMotion?: boolean;
+    highContrast?: boolean;
+    twoFactor?: boolean;
+    dataCollection?: boolean;
+    autoBackup?: boolean;
+    timeFormat24?: boolean;
+    compactMode?: boolean;
+    autoSave?: boolean;
+    spellCheck?: boolean;
   };
 }
 

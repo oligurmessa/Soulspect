@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { EmotionItem } from "./ItemCarousel";
+import { useRouter } from "next/navigation";
 
 interface EmotionDialogControlledProps {
     open: boolean;
@@ -21,6 +22,7 @@ interface EmotionDialogControlledProps {
 
 export default function EmotionDialogControlled({ open, onOpenChange, emotionItem, onDelete }: EmotionDialogControlledProps) {
     // Debug: received emotion item data
+    const router = useRouter();
     
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
