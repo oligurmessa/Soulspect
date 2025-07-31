@@ -10,7 +10,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Github, ArrowRight, Loader2, Mail } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,9 +20,10 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 
 interface AuthCardProps extends React.HTMLAttributes<HTMLDivElement> {
-    showGithub?: boolean;
+    showMeta?: boolean;
     showGoogle?: boolean;
     mode?: "signin" | "signup" | "reset";
 }
@@ -52,7 +53,7 @@ type SignupData = z.infer<typeof signupSchema>;
 type ResetData = z.infer<typeof resetSchema>;
 
 export default function AuthCard({
-    showGithub = true,
+    showMeta = true,
     showGoogle = true,
     mode: initialMode = "signin",
     className,
@@ -60,7 +61,7 @@ export default function AuthCard({
 }: AuthCardProps) {
     const [mode, setMode] = useState(initialMode);
     const [isLoading, setIsLoading] = useState(false);
-    const { signIn, signUp, signInWithGoogle, signInWithGithub, resetPassword } = useAuth();
+    const { signIn, signUp, signInWithGoogle, signInWithMeta, resetPassword } = useAuth();
     const router = useRouter();
 
     // Form setup based on mode
@@ -99,13 +100,13 @@ export default function AuthCard({
         }
     };
 
-    const handleSocialLogin = async (provider: "google" | "github") => {
+    const handleSocialLogin = async (provider: "google" | "meta") => {
         setIsLoading(true);
         try {
             if (provider === "google") {
                 await signInWithGoogle();
             } else {
-                await signInWithGithub();
+                await signInWithMeta();
             }
             toast.success("Welcome!");
             router.push("/dashboard");
@@ -154,10 +155,10 @@ export default function AuthCard({
     return (
         <Card
             className={cn(
-                "w-[min(100%,420px)] rounded-[2.5rem]",
-                "bg-white dark:bg-zinc-900 backdrop-blur-sm",
-                "border-0",
-                "shadow-2xl shadow-zinc-200/20 dark:shadow-none mx-auto",
+                "w-[min(100%,420px)] rounded-2xl",
+                "bg-white dark:bg-zinc-900",
+                "border border-zinc-200 dark:border-zinc-800",
+                "shadow-lg mx-auto",
                 className
             )}
             {...props}
@@ -183,10 +184,10 @@ export default function AuthCard({
                                 id="displayName"
                                 type="text"
                                 placeholder="Enter your name"
-                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 
-                                    border-zinc-200 dark:border-zinc-800
-                                    focus:border-zinc-300 dark:focus:border-zinc-700
-                                    placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800 
+                                    border-zinc-200 dark:border-zinc-700
+                                    focus:border-zinc-400 dark:focus:border-zinc-500
+                                    placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
                                 disabled={isLoading}
                                 {...register("displayName")}
                             />
@@ -202,10 +203,10 @@ export default function AuthCard({
                             id="email"
                             type="email"
                             placeholder="Enter your email"
-                            className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 
-                                border-zinc-200 dark:border-zinc-800
-                                focus:border-zinc-300 dark:focus:border-zinc-700
-                                placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                            className="h-12 rounded-xl bg-white/50 dark:bg-black/20 
+                                border-white/30 dark:border-black/30
+                                focus:border-orange-zinc dark:focus:border-zinc-500
+                                placeholder:text-gray-500 dark:placeholder:text-gray-400 backdrop-blur-sm"
                             disabled={isLoading}
                             {...register("email")}
                         />
@@ -219,27 +220,25 @@ export default function AuthCard({
                             <div className="flex justify-between items-center">
                                 <Label htmlFor="password">Password</Label>
                                 {mode === "signin" && (
-                                    <Button
-                                        type="button"
-                                        variant="link"
-                                        className="text-xs p-0 h-auto text-zinc-600 dark:text-zinc-400"
-                                        onClick={() => {
-                                            setMode("reset");
-                                            reset();
-                                        }}
-                                    >
-                                        Forgot password?
-                                    </Button>
+                                    <Link href="/forgot-password">
+                                        <Button
+                                            type="button"
+                                            variant="link"
+                                            className="text-xs p-0 h-auto text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                                        >
+                                            Forgot password?
+                                        </Button>
+                                    </Link>
                                 )}
                             </div>
                             <Input
                                 id="password"
                                 type="password"
                                 placeholder="Enter your password"
-                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 
-                                    border-zinc-200 dark:border-zinc-800
-                                    focus:border-zinc-300 dark:focus:border-zinc-700
-                                    placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800 
+                                    border-zinc-200 dark:border-zinc-700
+                                    focus:border-zinc-400 dark:focus:border-zinc-500
+                                    placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
                                 disabled={isLoading}
                                 {...register("password")}
                             />
@@ -256,10 +255,10 @@ export default function AuthCard({
                                 id="confirmPassword"
                                 type="password"
                                 placeholder="Confirm your password"
-                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 
-                                    border-zinc-200 dark:border-zinc-800
-                                    focus:border-zinc-300 dark:focus:border-zinc-700
-                                    placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+                                className="h-12 rounded-xl bg-zinc-50 dark:bg-zinc-800 
+                                    border-zinc-200 dark:border-zinc-700
+                                    focus:border-zinc-400 dark:focus:border-zinc-500
+                                    placeholder:text-zinc-500 dark:placeholder:text-zinc-400"
                                 disabled={isLoading}
                                 {...register("confirmPassword")}
                             />
@@ -272,10 +271,10 @@ export default function AuthCard({
                     <Button
                         type="submit"
                         className="w-full h-12 rounded-xl
-                            bg-zinc-800 dark:bg-zinc-100 
-                            hover:opacity-90
+                            bg-zinc-900 dark:bg-zinc-100 
+                            hover:bg-zinc-800 dark:hover:bg-zinc-200
                             text-white dark:text-zinc-900
-                            transition-all duration-300"
+                            transition-colors duration-200"
                         disabled={isLoading}
                     >
                         {isLoading ? (
@@ -295,7 +294,7 @@ export default function AuthCard({
                                     <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
                                 </div>
                                 <div className="relative flex justify-center text-xs">
-                                    <span className="px-4 text-zinc-400 dark:text-zinc-500 font-medium bg-white dark:bg-zinc-900">
+                                    <span className="px-4 text-zinc-500 dark:text-zinc-400 font-medium bg-white dark:bg-zinc-900">
                                         or continue with
                                     </span>
                                 </div>
@@ -307,10 +306,10 @@ export default function AuthCard({
                                         type="button"
                                         variant="outline"
                                         className="rounded-xl h-12 
-                                            bg-zinc-50 dark:bg-zinc-800/50
-                                            hover:bg-white dark:hover:bg-zinc-800
-                                            border-zinc-200 dark:border-zinc-800
-                                            hover:border-zinc-300 dark:hover:border-zinc-700"
+                                            bg-zinc-50 dark:bg-zinc-800
+                                            hover:bg-zinc-100 dark:hover:bg-zinc-700
+                                            border-zinc-200 dark:border-zinc-700
+                                            hover:border-zinc-300 dark:hover:border-zinc-600"
                                         onClick={() => handleSocialLogin("google")}
                                         disabled={isLoading}
                                     >
@@ -339,20 +338,22 @@ export default function AuthCard({
                                     </Button>
                                 )}
 
-                                {showGithub && (
+                                {showMeta && (
                                     <Button
                                         type="button"
                                         variant="outline"
                                         className="rounded-xl h-12
-                                            bg-zinc-50 dark:bg-zinc-800/50
-                                            hover:bg-white dark:hover:bg-zinc-800
-                                            border-zinc-200 dark:border-zinc-800
-                                            hover:border-zinc-300 dark:hover:border-zinc-700"
-                                        onClick={() => handleSocialLogin("github")}
+                                            bg-zinc-50 dark:bg-zinc-800
+                                            hover:bg-zinc-100 dark:hover:bg-zinc-700
+                                            border-zinc-200 dark:border-zinc-700
+                                            hover:border-zinc-300 dark:hover:border-zinc-600"
+                                        onClick={() => handleSocialLogin("meta")}
                                         disabled={isLoading}
                                     >
-                                        <Github className="h-5 w-5 text-zinc-700 dark:text-zinc-300 mr-2" />
-                                        GitHub
+                                        <svg className="h-5 w-5 text-zinc-700 dark:text-zinc-300 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                        </svg>
+                                        Meta
                                     </Button>
                                 )}
                             </div>
@@ -366,7 +367,7 @@ export default function AuthCard({
                     {content.altText}{" "}
                     <Button
                         variant="link"
-                        className="text-zinc-800 dark:text-white hover:text-zinc-600 dark:hover:text-zinc-300
+                        className="text-zinc-800 dark:text-zinc-200 hover:text-zinc-600 dark:hover:text-zinc-400
                             transition-colors font-medium p-0"
                         onClick={() => {
                             setMode(content.altMode);

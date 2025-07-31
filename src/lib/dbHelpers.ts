@@ -35,6 +35,7 @@ export interface User {
     autoSave?: boolean;
     spellCheck?: boolean;
     appPassword?: string;
+    lockFeatureEnabled?: boolean;
   };
 }
 

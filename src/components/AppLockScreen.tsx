@@ -7,7 +7,7 @@ import { Lock, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 
 export default function AppLockScreen() {
-  const { isLocked, hasPassword, loading } = useLock();
+  const { isLocked, hasPassword, lockFeatureEnabled, loading } = useLock();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (loading) {
@@ -21,8 +21,8 @@ export default function AppLockScreen() {
     );
   }
 
-  if (!isLocked) {
-    return null; // App is unlocked, show normal content
+  if (!lockFeatureEnabled || !isLocked) {
+    return null; // Lock feature disabled or app is unlocked, show normal content
   }
 
   return (

@@ -73,6 +73,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const [compactMode, setCompactMode] = useState(false);
     const [autoSave, setAutoSave] = useState(true);
     const [spellCheck, setSpellCheck] = useState(true);
+    const [lockFeatureEnabled, setLockFeatureEnabled] = useState(false);
 
     // Load user preferences
     useEffect(() => {
@@ -104,6 +105,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     if (prefs.compactMode !== undefined) setCompactMode(prefs.compactMode);
                     if (prefs.autoSave !== undefined) setAutoSave(prefs.autoSave);
                     if (prefs.spellCheck !== undefined) setSpellCheck(prefs.spellCheck);
+                    if (prefs.lockFeatureEnabled !== undefined) setLockFeatureEnabled(prefs.lockFeatureEnabled);
                 }
             } catch (error) {
                 console.error("Error loading preferences:", error);
@@ -139,6 +141,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 compactMode,
                 autoSave,
                 spellCheck,
+                lockFeatureEnabled,
             };
             
             await updateUser(user.uid, { preferences });
@@ -230,9 +233,43 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             case "preferences":
                 return (
                     <div className="space-y-6">
+                        
                         <div>
                             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">General Preferences</h3>
                             <div className="space-y-4">
+
+                        <div>
+                            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Theme</h3>
+                            <RadioGroup value={theme} onValueChange={setTheme}>
+                                <div className="grid grid-cols-3 gap-4">
+                                    {[
+                                        { value: "light", label: "Light", icon: <Sun className="w-4 h-4" /> },
+                                        { value: "dark", label: "Dark", icon: <Moon className="w-4 h-4" /> },
+                                        { value: "system", label: "System", icon: <Monitor className="w-4 h-4" /> }
+                                    ].map((option) => (
+                                        <label
+                                            key={option.value}
+                                            className={`relative flex flex-col items-center gap-2 p-4 cursor-pointer rounded-xl border-2 transition-all
+                                                ${theme === option.value
+                                                    ? "border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800/50"
+                                                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                                                }`}
+                                        >
+                                            <RadioGroupItem value={option.value} className="sr-only" />
+                                            {option.icon}
+                                            <span className="text-sm font-medium">{option.label}</span>
+                                            {theme === option.value && (
+                                                <div className="absolute -top-2 -right-2">
+                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 dark:bg-white">
+                                                        <Check className="h-3 w-3 text-white dark:text-zinc-900" />
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </label>
+                                    ))}
+                                </div>
+                            </RadioGroup>
+                        </div>
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <Label className="text-zinc-900 dark:text-white">Start week on Monday</Label>
@@ -363,38 +400,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             case "appearance":
                 return (
                     <div className="space-y-6">
-                        <div>
-                            <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Theme</h3>
-                            <RadioGroup value={theme} onValueChange={setTheme}>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {[
-                                        { value: "light", label: "Light", icon: <Sun className="w-4 h-4" /> },
-                                        { value: "dark", label: "Dark", icon: <Moon className="w-4 h-4" /> },
-                                        { value: "system", label: "System", icon: <Monitor className="w-4 h-4" /> }
-                                    ].map((option) => (
-                                        <label
-                                            key={option.value}
-                                            className={`relative flex flex-col items-center gap-2 p-4 cursor-pointer rounded-xl border-2 transition-all
-                                                ${theme === option.value
-                                                    ? "border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800/50"
-                                                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-                                                }`}
-                                        >
-                                            <RadioGroupItem value={option.value} className="sr-only" />
-                                            {option.icon}
-                                            <span className="text-sm font-medium">{option.label}</span>
-                                            {theme === option.value && (
-                                                <div className="absolute -top-2 -right-2">
-                                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 dark:bg-white">
-                                                        <Check className="h-3 w-3 text-white dark:text-zinc-900" />
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </label>
-                                    ))}
-                                </div>
-                            </RadioGroup>
-                        </div>
+
                         
                         <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800">
                             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Accessibility</h3>
@@ -493,6 +499,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         <div>
                             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Security</h3>
                             <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label className="text-zinc-900 dark:text-white">App lock feature</Label>
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">Enable app lock to secure your data with a password. When disabled, the lock option will be removed from the sidebar.</p>
+                                    </div>
+                                    <Switch checked={lockFeatureEnabled} onCheckedChange={setLockFeatureEnabled} />
+                                </div>
+                                
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <Label className="text-zinc-900 dark:text-white">Two-factor authentication</Label>
@@ -645,7 +659,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4">Help & Support</h3>
                             <div className="space-y-3">
                                 <Button variant="outline" className="w-full justify-between">
-                                    <span>Documentation</span>
+                                    <span>Release Notes</span>
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                                 
@@ -653,12 +667,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     <span>Contact Support</span>
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
-                                
+
                                 <Button variant="outline" className="w-full justify-between">
-                                    <span>Community Forum</span>
+                                    <span>System Status</span>
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
-                                
+
                                 <Button variant="outline" className="w-full justify-between">
                                     <span>Keyboard Shortcuts</span>
                                     <ChevronRight className="w-4 h-4" />

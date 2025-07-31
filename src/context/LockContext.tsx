@@ -7,6 +7,7 @@ import { getUser, updateUser } from "@/lib/dbHelpers";
 interface LockContextType {
   isLocked: boolean;
   hasPassword: boolean;
+  lockFeatureEnabled: boolean;
   setPassword: (password: string) => Promise<void>;
   verifyPassword: (password: string) => Promise<boolean>;
   lock: () => void;
@@ -17,6 +18,7 @@ interface LockContextType {
 const LockContext = createContext<LockContextType>({
   isLocked: true,
   hasPassword: false,
+  lockFeatureEnabled: false,
   setPassword: async () => {},
   verifyPassword: async () => false,
   lock: () => {},
@@ -38,6 +40,7 @@ export const LockProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const [isLocked, setIsLocked] = useState(true);
   const [hasPassword, setHasPassword] = useState(false);
+  const [lockFeatureEnabled, setLockFeatureEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [storedPasswordHash, setStoredPasswordHash] = useState<string | null>(null);
 
@@ -52,8 +55,11 @@ export const LockProvider = ({ children }: { children: ReactNode }) => {
       try {
         const userData = await getUser(user.uid);
         const appPassword = userData?.preferences?.appPassword;
+        const lockEnabled = userData?.preferences?.lockFeatureEnabled ?? false;
         
-        if (appPassword) {
+        setLockFeatureEnabled(lockEnabled);
+        
+        if (lockEnabled && appPassword) {
           setHasPassword(true);
           setStoredPasswordHash(appPassword);
           // Check if user was previously unlocked in this session
@@ -61,7 +67,7 @@ export const LockProvider = ({ children }: { children: ReactNode }) => {
           setIsLocked(!sessionUnlocked);
         } else {
           setHasPassword(false);
-          setIsLocked(false); // No password set, so app is unlocked
+          setIsLocked(false); // No password set or feature disabled, so app is unlocked
         }
       } catch (error) {
         console.error("Error loading lock settings:", error);
@@ -127,6 +133,7 @@ export const LockProvider = ({ children }: { children: ReactNode }) => {
   const value: LockContextType = {
     isLocked,
     hasPassword,
+    lockFeatureEnabled,
     setPassword,
     verifyPassword,
     lock,

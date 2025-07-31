@@ -2,7 +2,7 @@
 import { PromptInputBox } from "@/components/ai-prompt-box";
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, User, Brain, RotateCcw, Lightbulb } from 'lucide-react';
+import { Loader, User, Brain, RotateCcw, Lightbulb } from 'lucide-react';
 import { runGeminiPrompt } from '@/lib/gemini';
 
 
@@ -49,7 +49,7 @@ const MessageBubble: React.FC<{ message: Message; isLast: boolean }> = ({ messag
     >
       {!isUser && (
         <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg flex-shrink-0">
-          <Bot className="w-4 h-4" />
+          <Loader className="w-4 h-4" />
         </div>
       )}
       
@@ -93,7 +93,7 @@ const TypingIndicator: React.FC = () => (
     className="flex gap-3 mb-6"
   >
     <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shadow-lg">
-      <Bot className="w-4 h-4 text-secondary-foreground" />
+      <Loader className="w-4 h-4 text-secondary-foreground" />
     </div>
 
     <div className="bg-secondary rounded-2xl px-4 py-3 border border-border/30 shadow-lg backdrop-blur-sm">
@@ -239,7 +239,7 @@ Respond as a compassionate guide in 1-3 sentences. Be authentic, insightful, and
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 opacity-80">
               <div className="mb-4">
-                <Brain className="w-8 h-8 text-blue-400" />
+                <Loader className="w-8 h-8 text-blue-400" />
               </div>
               <h2 className="text-lg font-semibold mb-2">Welcome to Soulspace</h2>
               <p className="text-sm text-muted-foreground text-center max-w-md">

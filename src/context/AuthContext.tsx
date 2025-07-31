@@ -11,7 +11,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  GithubAuthProvider,
+  FacebookAuthProvider,
   sendPasswordResetEmail,
   sendEmailVerification,
   updateProfile,
@@ -29,7 +29,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
+  signInWithMeta: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
@@ -43,7 +43,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signInWithGoogle: async () => {},
-  signInWithGithub: async () => {},
+  signInWithMeta: async () => {},
   resetPassword: async () => {},
   sendVerificationEmail: async () => {},
   updateUserProfile: async () => {},
@@ -52,7 +52,7 @@ const AuthContext = createContext<AuthContextType>({
 
 // Auth providers
 const googleProvider = new GoogleAuthProvider();
-const githubProvider = new GithubAuthProvider();
+const metaProvider = new FacebookAuthProvider();
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -139,12 +139,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithGithub = async () => {
+  const signInWithMeta = async () => {
     try {
-      const result = await signInWithPopup(auth, githubProvider);
+      const result = await signInWithPopup(auth, metaProvider);
       // User creation in Firestore is handled by onAuthStateChanged
     } catch (error: any) {
-      throw new Error(error.message || "GitHub sign-in failed");
+      throw new Error(error.message || "Meta sign-in failed");
     }
   };
 
@@ -205,7 +205,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signUp,
     signInWithGoogle,
-    signInWithGithub,
+    signInWithMeta,
     resetPassword,
     sendVerificationEmail,
     updateUserProfile,

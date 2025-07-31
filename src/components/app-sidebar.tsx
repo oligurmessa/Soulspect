@@ -40,7 +40,7 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lockDialogOpen, setLockDialogOpen] = useState(false);
-  const { isLocked, hasPassword, lock } = useLock();
+  const { isLocked, hasPassword, lockFeatureEnabled, lock } = useLock();
 
   return (
     <Sidebar
@@ -154,53 +154,57 @@ export function AppSidebar() {
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          {/* Lock/Unlock button */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                if (hasPassword) {
-                  if (isLocked) {
-                    setLockDialogOpen(true);
+          {/* Lock/Unlock button - only show if lock feature is enabled */}
+          {lockFeatureEnabled && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => {
+                  if (hasPassword) {
+                    if (isLocked) {
+                      setLockDialogOpen(true);
+                    } else {
+                      lock();
+                    }
                   } else {
-                    lock();
+                    setLockDialogOpen(true);
                   }
-                } else {
-                  setLockDialogOpen(true);
-                }
-              }}
-              tooltip={hasPassword ? (isLocked ? "Unlock App" : "Lock App") : "Set Password"}
-              className="sidebar-menu-button"
-            >
-              <div className={cn(
-                "flex items-center transition-all duration-200 rounded-lg",
-                isCollapsed
-                  ? "justify-center w-12 h-12 p-0"
-                  : "justify-start gap-3 px-3 py-2 w-full"
-              )}>
-                <span className="material-symbols-outlined text-2xl flex-shrink-0">
-                  {hasPassword ? (isLocked ? "lock" : "lock_open") : "security"}
-                </span>
-                <span className={cn(
-                  "transition-all duration-200 overflow-hidden whitespace-nowrap",
-                  isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                }}
+                tooltip={hasPassword ? (isLocked ? "Unlock App" : "Lock App") : "Set Password"}
+                className="sidebar-menu-button"
+              >
+                <div className={cn(
+                  "flex items-center transition-all duration-200 rounded-lg",
+                  isCollapsed
+                    ? "justify-center w-12 h-12 p-0"
+                    : "justify-start gap-3 px-3 py-2 w-full"
                 )}>
-                  {hasPassword ? (isLocked ? "Unlock" : "Lock") : "Set Password"}
-                </span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+                  <span className="material-symbols-outlined text-2xl flex-shrink-0">
+                    {hasPassword ? (isLocked ? "lock" : "lock_open") : "security"}
+                  </span>
+                  <span className={cn(
+                    "transition-all duration-200 overflow-hidden whitespace-nowrap",
+                    isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                  )}>
+                    {hasPassword ? (isLocked ? "Unlock" : "Lock") : "Set Password"}
+                  </span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarFooter>
       
       {/* Settings Modal */}
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       
-      {/* Lock Dialog */}
-      <LockDialog
-        open={lockDialogOpen}
-        onOpenChange={setLockDialogOpen}
-        mode={hasPassword ? "verify" : "set"}
-      />
+      {/* Lock Dialog - only render if lock feature is enabled */}
+      {lockFeatureEnabled && (
+        <LockDialog
+          open={lockDialogOpen}
+          onOpenChange={setLockDialogOpen}
+          mode={hasPassword ? "verify" : "set"}
+        />
+      )}
     </Sidebar>
   );
 }

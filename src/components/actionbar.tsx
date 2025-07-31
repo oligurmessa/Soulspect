@@ -4,14 +4,15 @@ import * as React from "react"
 import { AnimatePresence, motion, useAnimation } from "framer-motion"
 import { cn } from "@/lib/utils"
 import {
+  TypeOutline,
   SlidersHorizontal,
-  Type,
+  FileText,
   Paperclip,
   AudioLines,
   ChevronRight,
   Video,
   BadgePlus,
-  Sparkles,
+  Wand,
   Lock,
   Unlock,
   type LucideIcon,
@@ -77,12 +78,14 @@ export function Actionbar({
 
 
   const ActionbarItems: ActionbarItem[] = [
-    { id: "Type", title: "Type", icon: Type },
+    { id: "audio", title: "Audio", icon: AudioLines },
+    { id: "Type", title: "Type", icon: FileText },
     { id: "Video", title: "Video", icon: Video },
     { id: "emotions", title: "Emotions", icon: BadgePlus },
     { id: "attach", title: "Attach", icon: Paperclip },
     { id: "prompt", title: "Prompt", icon: ChevronRight },
-    { id: "audio", title: "Audio", icon: AudioLines },
+    { id: "connections", title: "Connections", icon: SlidersHorizontal },
+
   ]
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,7 +396,7 @@ export function Actionbar({
             className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
             title="Toggle Toolbar"
           >
-            <SlidersHorizontal size={18} />
+            <TypeOutline size={18} />
           </motion.button>
         )}
 
@@ -422,7 +425,7 @@ export function Actionbar({
           className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
           title="Intensify"
         >
-          <Sparkles size={18} />
+          <Wand size={22} />
         </motion.button>
 
         {/* Lock/Unlock Button */}
