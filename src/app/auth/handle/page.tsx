@@ -1,109 +1,68 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword } from "firebase/auth"
-import { auth } from "@/lib/firebase"
-import { toast } from "sonner"
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Icons } from "@/components/icons"
-import Link from "next/link"
+function AuthHandleContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState('Loading...');
 
-export default function RegisterPage() {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false)
-  const [email, setEmail] = React.useState<string>("")
-  const [password, setPassword] = React.useState<string>("")
-  const router = useRouter()
+  useEffect(() => {
+    // Get all search parameters
+    const mode = searchParams.get('mode');
+    const oobCode = searchParams.get('oobCode');
+    const continueUrl = searchParams.get('continueUrl');
+    const apiKey = searchParams.get('apiKey');
+    const lang = searchParams.get('lang');
 
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    setIsLoading(true)
+    setStatus(`Processing ${mode} request...`);
+    console.log('Handle page - Mode:', mode, 'Code:', oobCode?.substring(0, 10) + '...');
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password)
-      toast.success("Account created successfully!")
-      router.push("/dashboard") // Redirect to dashboard after successful registration
-    } catch (error: unknown) {
-      console.error("Registration error:", error)
-      const errorMessage = error instanceof Error ? error.message : "Registration failed. Please try again."
-      toast.error(errorMessage)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    // Add a small delay to show the status
+    setTimeout(() => {
+      if (mode === 'resetPassword' && oobCode) {
+        // For password reset, go directly to reset password page
+        setStatus('Redirecting to password reset page...');
+        console.log('Redirecting directly to reset-password page');
+        router.replace(`/reset-password?oobCode=${oobCode}&continueUrl=${continueUrl || ''}`);
+        return;
+      }
+
+      // For other modes, redirect to action handler
+      const params = new URLSearchParams();
+      if (mode) params.set('mode', mode);
+      if (oobCode) params.set('oobCode', oobCode);
+      if (continueUrl) params.set('continueUrl', continueUrl);
+      if (apiKey) params.set('apiKey', apiKey);
+      if (lang) params.set('lang', lang);
+
+      const redirectUrl = `/auth/action?${params.toString()}`;
+      setStatus('Redirecting to auth handler...');
+      console.log('Redirecting to action handler:', redirectUrl);
+      router.replace(redirectUrl);
+    }, 1000);
+  }, [searchParams, router]);
 
   return (
-    <div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm md:max-w-3xl">
-        <div className="grid gap-6">
-          <form onSubmit={onSubmit}>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  placeholder="name@example.com"
-                  type="email"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect="off"
-                  disabled={isLoading}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  disabled={isLoading}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button disabled={isLoading}>
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Sign Up with Email
-              </Button>
-            </div>
-          </form>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-          <Button variant="outline" type="button" disabled={isLoading}>
-            {isLoading ? (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Icons.google className="mr-2 h-4 w-4" />
-            )}{" "}
-            Google
-          </Button>
-          <p className="px-8 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="underline underline-offset-4 hover:text-primary"
-            >
-              Sign In
-            </Link>
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 flex items-center justify-center p-4">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white mx-auto mb-4"></div>
+        <p className="text-zinc-600 dark:text-zinc-400">{status}</p>
+        <p className="text-xs text-zinc-500 mt-2">Mode: {searchParams.get('mode')}</p>
       </div>
     </div>
-  )
+  );
+}
+
+export default function AuthHandlePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 dark:border-white"></div>
+      </div>
+    }>
+      <AuthHandleContent />
+    </Suspense>
+  );
 }

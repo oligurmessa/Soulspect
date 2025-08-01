@@ -30,6 +30,8 @@ function AuthActionContent() {
       const actionCode = searchParams.get('oobCode');
       const continueUrl = searchParams.get('continueUrl');
 
+      console.log('Auth action handler - Mode:', mode, 'Code:', actionCode?.substring(0, 10) + '...');
+
       if (!actionCode || !mode) {
         setResult({
           type: 'error',
@@ -46,8 +48,9 @@ function AuthActionContent() {
             break;
           case 'resetPassword':
             // Redirect to password reset page with the code
-            router.push(`/reset-password?oobCode=${actionCode}&continueUrl=${continueUrl || ''}`);
-            break;
+            console.log('Redirecting to reset-password page with code:', actionCode?.substring(0, 10) + '...');
+            router.replace(`/reset-password?oobCode=${actionCode}&continueUrl=${continueUrl || ''}`);
+            return; // Exit early to prevent further processing
           case 'recoverEmail':
             await handleEmailRecovery(actionCode);
             break;
