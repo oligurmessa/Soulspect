@@ -9,7 +9,27 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    domains: ['lh3.googleusercontent.com'], // For Google profile images
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
+  webpack: (config: any, { isServer }: any) => {
+    if (!isServer) {
+      // Don't resolve 'fs' module on the client to prevent this error on build --> Error: Can't resolve 'fs'
+      config.resolve.fallback = {
+        fs: false,
+        net: false,
+        dns: false,
+        child_process: false,
+        tls: false,
+      };
+    }
+    return config;
   },
 }
 

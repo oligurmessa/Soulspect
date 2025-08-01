@@ -1,20 +1,19 @@
 // components/AIButton.tsx
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import Image from "next/image"; // Import the Next.js Image component
-import { useRouter } from 'next/navigation'; // Import useRouter for navigation
+import Image from "next/image";
 
 interface AIButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     loading?: boolean;
+    onToggleChat?: () => void;
 }
 
 export default function AIButton({
     loading = false,
     className,
+    onToggleChat,
     ...props
 }: AIButtonProps) {
-    const router = useRouter(); // Initialize the router
-
     // Define the brand glow effect with decreased intensity
     const brandGlow = {
         boxShadow: "0 0 10px rgba(255, 240, 200, 0.3), 0 0 20px rgba(255, 240, 200, 0.5)"
@@ -25,8 +24,10 @@ export default function AIButton({
         if (props.onClick) {
             props.onClick(event);
         }
-        // Redirect to the dashboard/soulspace page
-        router.push('/dashboard/soulspace');
+        // Toggle chat pane if handler is provided
+        if (onToggleChat) {
+            onToggleChat();
+        }
     };
 
     return (

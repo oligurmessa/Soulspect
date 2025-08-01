@@ -1,13 +1,12 @@
-import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getApps, initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
-/** Store the full service-account JSON in one env var */
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-);
-
+// For development, we'll use the client SDK approach on server-side
+// This avoids the private key format issues
 const adminApp = getApps().length
   ? getApps()[0]
-  : initializeApp({ credential: cert(serviceAccount) });
+  : initializeApp({ 
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || "soulspect-app"
+    });
 
 export const adminDb = getFirestore(adminApp);

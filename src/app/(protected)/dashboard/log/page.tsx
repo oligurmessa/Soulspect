@@ -13,6 +13,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import Button03 from "@/components/AIButton"
 import MotionButton03 from "@/components/MotionButton03"
 import ThreeDotsMenu from "@/components/ThreeDotsMenu"
+import FloatingChatPane from "@/components/FloatingChatPane"
 
 export default function JournalPage() {
   const { user } = useAuth()
@@ -43,6 +44,9 @@ export default function JournalPage() {
   
   // Store carousel data to load after component mounts
   const [pendingCarouselData, setPendingCarouselData] = useState<any>(null)
+  
+  // Chat pane state
+  const [isChatOpen, setIsChatOpen] = useState(false)
 
   // Unified entry loading function
   const loadEntryData = async (entryId: string) => {
@@ -784,7 +788,7 @@ export default function JournalPage() {
           )}
         </div>
               <div className="fixed bottom-8 right-8 z-50">
-        <Button03 />
+        <Button03 onToggleChat={() => setIsChatOpen(!isChatOpen)} />
       </div>
       </div>
 
@@ -805,6 +809,12 @@ export default function JournalPage() {
         onImageUpload={handleImageUpload}
         userId={user?.uid}
         entryId={currentEntryId || editingEntryId}
+      />
+
+      {/* Floating Chat Pane */}
+      <FloatingChatPane 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
       />
     </div>
   )
