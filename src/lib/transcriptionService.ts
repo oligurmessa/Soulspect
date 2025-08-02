@@ -1,9 +1,17 @@
 import OpenAI from 'openai';
 import { DataSyncService } from './dataSyncService';
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY!,
-});
+// Lazy initialization to avoid build errors
+let openai: OpenAI | null = null;
+
+const getOpenAI = () => {
+  if (!openai && process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
 export class TranscriptionService {
   // Transcribe audio blob to text
@@ -12,7 +20,12 @@ export class TranscriptionService {
       // Convert blob to file
       const audioFile = new File([audioBlob], 'audio.webm', { type: 'audio/webm' });
       
-      const response = await openai.audio.transcriptions.create({
+      const ai = getOpenAI();
+      if (!ai) {
+        throw new Error('OpenAI not available (missing API key)');
+      }
+      
+      const response = await ai.audio.transcriptions.create({
         file: audioFile,
         model: 'whisper-1',
         language: 'en', // Can be made dynamic based on user preference

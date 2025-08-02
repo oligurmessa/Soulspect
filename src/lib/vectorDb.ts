@@ -7,14 +7,27 @@ import {
   User 
 } from './dbHelpers';
 
-// Initialize clients
-const pinecone = new Pinecone({
-  apiKey: process.env.NEXT_PUBLIC_PINECONE_API_KEY!,
-});
+// Lazy initialization to avoid build errors
+let pinecone: Pinecone | null = null;
+let openai: OpenAI | null = null;
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY!,
-});
+const getPinecone = () => {
+  if (!pinecone && process.env.NEXT_PUBLIC_PINECONE_API_KEY) {
+    pinecone = new Pinecone({
+      apiKey: process.env.NEXT_PUBLIC_PINECONE_API_KEY,
+    });
+  }
+  return pinecone;
+};
+
+const getOpenAI = () => {
+  if (!openai && process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    });
+  }
+  return openai;
+};
 
 // Constants
 const INDEX_NAME = 'soulspect-index';
@@ -47,7 +60,12 @@ export class VectorDbService {
 
   private async initializeIndex() {
     try {
-      this.index = pinecone.index(INDEX_NAME);
+      const pc = getPinecone();
+      if (!pc) {
+        console.warn('Pinecone not available (missing API key)');
+        return;
+      }
+      this.index = pc.index(INDEX_NAME);
       console.log('Vector DB initialized successfully');
     } catch (error) {
       console.error('Error initializing vector DB:', error);
@@ -58,7 +76,9 @@ export class VectorDbService {
 
   private async createIndex() {
     try {
-      await pinecone.createIndex({
+      const pc = getPinecone();
+      if (!pc) return;
+      await pc.createIndex({
         name: INDEX_NAME,
         dimension: 1536, // OpenAI embedding dimension
         metric: 'cosine',
@@ -72,7 +92,10 @@ export class VectorDbService {
       
       // Wait for index to be ready
       await new Promise(resolve => setTimeout(resolve, 60000));
-      this.index = pinecone.index(INDEX_NAME);
+      const pcClient = getPinecone();
+      if (pcClient) {
+        this.index = pcClient.index(INDEX_NAME);
+      }
     } catch (error) {
       console.error('Error creating index:', error);
     }
@@ -81,7 +104,11 @@ export class VectorDbService {
   // Generate embeddings for text content
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      const response = await openai.embeddings.create({
+      const ai = getOpenAI();
+      if (!ai) {
+        throw new Error('OpenAI not available (missing API key)');
+      }
+      const response = await ai.embeddings.create({
         input: text,
         model: EMBEDDING_MODEL,
         dimensions: EMBEDDING_DIMENSIONS,
