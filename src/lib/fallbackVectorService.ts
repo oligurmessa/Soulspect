@@ -1,8 +1,7 @@
 // Fallback vector service using basic text similarity when OpenAI is unavailable
 import { 
   EmotionLog, 
-  JournalEntry, 
-  SoulWorkExercise,
+  JournalEntry
 } from './dbHelpers';
 
 export class FallbackVectorService {
@@ -31,9 +30,6 @@ export class FallbackVectorService {
         const emotion = data as EmotionLog;
         return `${emotion.emotions.join(' ')} ${emotion.triggers?.join(' ') || ''} ${emotion.context || ''}`;
       
-      case 'soulwork':
-        return `${data.title} ${JSON.stringify(data.responses)}`;
-      
       default:
         return JSON.stringify(data);
     }
@@ -45,7 +41,6 @@ export class FallbackVectorService {
     userData: {
       journals: JournalEntry[];
       emotions: EmotionLog[];
-      soulwork: SoulWorkExercise[];
     },
     limit: number = 5
   ): Promise<Array<{
@@ -66,7 +61,7 @@ export class FallbackVectorService {
       const content = this.formatContent(journal, 'journal');
       const similarity = this.calculateSimilarity(query, content);
       
-      if (similarity > 0.1) {
+      if (similarity > 0.15) { // Raise threshold to reduce noise
         results.push({
           type: 'journal',
           data: journal,
@@ -81,27 +76,12 @@ export class FallbackVectorService {
       const content = this.formatContent(emotion, 'emotion');
       const similarity = this.calculateSimilarity(query, content);
       
-      if (similarity > 0.1) {
+      if (similarity > 0.15) { // Raise threshold to reduce noise
         results.push({
           type: 'emotion',
           data: emotion,
           similarity,
-          preview: `Mood ${emotion.mood}/6: ${emotion.emotions.join(', ')}`,
-        });
-      }
-    });
-
-    // Search soul work
-    userData.soulwork.forEach(work => {
-      const content = this.formatContent(work, 'soulwork');
-      const similarity = this.calculateSimilarity(query, content);
-      
-      if (similarity > 0.1) {
-        results.push({
-          type: 'soulwork',
-          data: work,
-          similarity,
-          preview: `${work.title} (${work.exerciseType})`,
+          preview: `Mood ${emotion.mood || 'unspecified'}/6: ${emotion.emotions?.join(', ') || 'no emotions listed'}`,
         });
       }
     });
@@ -156,6 +136,8 @@ export class FallbackVectorService {
     
     if (topEmotion && topEmotion[1] > 3) {
       patterns.push(`"${topEmotion[0]}" appears frequently in your emotional journey`);
+    } else if (topEmotion && topEmotion[1] > 1) {
+      patterns.push(`"${topEmotion[0]}" has appeared ${topEmotion[1]} times recently`);
     }
 
     // Trigger patterns
@@ -171,6 +153,8 @@ export class FallbackVectorService {
     
     if (topTrigger && topTrigger[1] > 2) {
       patterns.push(`"${topTrigger[0]}" is a recurring theme in your experiences`);
+    } else if (topTrigger && topTrigger[1] > 1) {
+      patterns.push(`"${topTrigger[0]}" has appeared as a trigger`);
     }
 
     return patterns.slice(0, 3);
@@ -192,8 +176,11 @@ export class FallbackVectorService {
       suggestions.push('Take a 10-minute break to step away from stressors');
       suggestions.push('Write down what you can control vs. cannot control');
     } else {
-      suggestions.push('Take a moment for self-reflection');
-      suggestions.push('Practice gratitude by noting three positive things');
+      // Provide general but thoughtful suggestions based on query context
+      if (lowerQuery.length > 10) { // Only if they provided meaningful input
+        suggestions.push('Take a moment for self-reflection');
+        suggestions.push('Consider journaling about your thoughts');
+      }
     }
 
     // Pattern-based suggestions

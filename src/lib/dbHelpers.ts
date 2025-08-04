@@ -92,17 +92,6 @@ export interface JournalEntry {
   };
 }
 
-export interface SoulWorkExercise {
-  id?: string;
-  userId: string;
-  exerciseType: 'shadow-work' | 'inner-child' | 'values' | 'purpose';
-  title: string;
-  responses: Record<string, any>;  // Flexible structure for different exercises
-  duration: number;        // Minutes spent
-  completedAt: Timestamp;
-  createdAt: Timestamp;
-}
-
 export interface UserValues {
   id?: string;
   userId: string;
@@ -146,10 +135,6 @@ export interface AnalyticsData {
     voiceMinutes: number;
     videoMinutes: number;
   };
-  soulWorkStats: {
-    exercisesCompleted: number;
-    timeSpent: number;
-  };
   createdAt: Timestamp;
 }
 
@@ -179,8 +164,12 @@ export const updateUser = async (uid: string, updates: Partial<User>) => {
   });
 };
 
-/* ---------- EMOTION LOGS CRUD ---------- */
+/* ---------- LEGACY EMOTION LOGS (DEPRECATED - USE MOMENTS) ---------- */
+// NOTE: These functions are deprecated. New entries should use the unified Moment system.
+// Keeping for backward compatibility and data migration only.
+
 export const addEmotionLog = async (uid: string, data: Omit<EmotionLog, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+  console.warn('[DEPRECATED] addEmotionLog - Use createMoment with type="emotion" instead');
   const emotionLogData = {
     ...data,
     userId: uid,
@@ -191,6 +180,7 @@ export const addEmotionLog = async (uid: string, data: Omit<EmotionLog, 'id' | '
 };
 
 export const getEmotionLogs = async (uid: string, limitCount = 50) => {
+  console.warn('[DEPRECATED] getEmotionLogs - Use getMoments with type="emotion" instead');
   const logsQuery = query(
     collection(db, "users", uid, "emotionLogs"),
     orderBy("createdAt", "desc"),
@@ -201,6 +191,7 @@ export const getEmotionLogs = async (uid: string, limitCount = 50) => {
 };
 
 export const getEmotionLogsByDateRange = async (uid: string, startDate: Date, endDate: Date) => {
+  console.warn('[DEPRECATED] getEmotionLogsByDateRange - Use getMoments with date filters instead');
   const logsQuery = query(
     collection(db, "users", uid, "emotionLogs"),
     where("createdAt", ">=", Timestamp.fromDate(startDate)),
@@ -212,6 +203,7 @@ export const getEmotionLogsByDateRange = async (uid: string, startDate: Date, en
 };
 
 export const updateEmotionLog = async (uid: string, logId: string, updates: Partial<EmotionLog>) => {
+  console.warn('[DEPRECATED] updateEmotionLog - Use updateMoment instead');
   const logRef = doc(db, "users", uid, "emotionLogs", logId);
   return updateDoc(logRef, {
     ...updates,
@@ -220,12 +212,17 @@ export const updateEmotionLog = async (uid: string, logId: string, updates: Part
 };
 
 export const deleteEmotionLog = async (uid: string, logId: string) => {
+  console.warn('[DEPRECATED] deleteEmotionLog - Use deleteMoment instead');
   const logRef = doc(db, "users", uid, "emotionLogs", logId);
   return deleteDoc(logRef);
 };
 
-/* ---------- JOURNAL ENTRIES CRUD ---------- */
+/* ---------- LEGACY JOURNAL ENTRIES (DEPRECATED - USE MOMENTS) ---------- */
+// NOTE: These functions are deprecated. New entries should use the unified Moment system.
+// Keeping for backward compatibility and data migration only.
+
 export const addJournalEntry = async (uid: string, data: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
+  console.warn('[DEPRECATED] addJournalEntry - Use createMoment with type="journal" instead');
   const entryData = {
     ...data,
     userId: uid,
@@ -236,6 +233,7 @@ export const addJournalEntry = async (uid: string, data: Omit<JournalEntry, 'id'
 };
 
 export const getJournalEntries = async (uid: string, limitCount = 50) => {
+  console.warn('[DEPRECATED] getJournalEntries - Use getMoments with type="journal" instead');
   const entriesQuery = query(
     collection(db, "users", uid, "journalEntries"),
     orderBy("date", "desc"),
@@ -246,6 +244,7 @@ export const getJournalEntries = async (uid: string, limitCount = 50) => {
 };
 
 export const getJournalEntry = async (uid: string, entryId: string) => {
+  console.warn('[DEPRECATED] getJournalEntry - Use getMoment instead');
   const entryDoc = await getDoc(doc(db, "users", uid, "journalEntries", entryId));
   if (entryDoc.exists()) {
     return { id: entryDoc.id, ...entryDoc.data() } as JournalEntry;
@@ -254,6 +253,7 @@ export const getJournalEntry = async (uid: string, entryId: string) => {
 };
 
 export const updateJournalEntry = async (uid: string, entryId: string, updates: Partial<JournalEntry>) => {
+  console.warn('[DEPRECATED] updateJournalEntry - Use updateMoment instead');
   const entryRef = doc(db, "users", uid, "journalEntries", entryId);
   return updateDoc(entryRef, {
     ...updates,
@@ -262,28 +262,9 @@ export const updateJournalEntry = async (uid: string, entryId: string, updates: 
 };
 
 export const deleteJournalEntry = async (uid: string, entryId: string) => {
+  console.warn('[DEPRECATED] deleteJournalEntry - Use deleteMoment instead');
   const entryRef = doc(db, "users", uid, "journalEntries", entryId);
   return deleteDoc(entryRef);
-};
-
-/* ---------- SOUL WORK EXERCISES CRUD ---------- */
-export const addSoulWorkExercise = async (uid: string, data: Omit<SoulWorkExercise, 'id' | 'userId' | 'createdAt'>) => {
-  const exerciseData = {
-    ...data,
-    userId: uid,
-    createdAt: serverTimestamp(),
-  };
-  return addDoc(collection(db, "users", uid, "soulWorkExercises"), exerciseData);
-};
-
-export const getSoulWorkExercises = async (uid: string, limitCount = 50) => {
-  const exercisesQuery = query(
-    collection(db, "users", uid, "soulWorkExercises"),
-    orderBy("completedAt", "desc"),
-    limit(limitCount)
-  );
-  const snapshot = await getDocs(exercisesQuery);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SoulWorkExercise));
 };
 
 /* ---------- USER VALUES CRUD ---------- */
@@ -393,20 +374,6 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
     videoMinutes: journalEntries.filter(e => e.entryType === 'video').length * 5, // Estimate
   };
   
-  // Get soul work exercises for the period
-  const soulWorkQuery = query(
-    collection(db, "users", uid, "soulWorkExercises"),
-    where("completedAt", ">=", Timestamp.fromDate(startDate)),
-    where("completedAt", "<=", Timestamp.fromDate(now))
-  );
-  const soulWorkSnapshot = await getDocs(soulWorkQuery);
-  const soulWorkExercises = soulWorkSnapshot.docs.map(doc => doc.data() as SoulWorkExercise);
-  
-  const soulWorkStats = {
-    exercisesCompleted: soulWorkExercises.length,
-    timeSpent: soulWorkExercises.reduce((sum, exercise) => sum + exercise.duration, 0),
-  };
-  
   // Save analytics data
   const analyticsData: Omit<AnalyticsData, 'id' | 'createdAt'> = {
     userId: uid,
@@ -414,7 +381,6 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
     date: Timestamp.fromDate(now),
     emotionStats,
     journalStats,
-    soulWorkStats,
   };
   
   const analyticsRef = doc(db, "users", uid, "analytics", `${period}-${now.toISOString().split('T')[0]}`);
@@ -441,11 +407,10 @@ export const getAnalytics = async (uid: string, period: 'daily' | 'weekly' | 'mo
 export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json') => {
   try {
     // Get all user data
-    const [emotionLogs, journalEntries, userValues, soulWorkExercises, analytics] = await Promise.all([
+    const [emotionLogs, journalEntries, userValues, analytics] = await Promise.all([
       getEmotionLogs(uid, 1000),
       getJournalEntries(uid, 1000),
       getUserValues(uid),
-      getSoulWorkExercises(uid, 1000),
       getAnalytics(uid, 'weekly', 100)
     ]);
 
@@ -469,11 +434,6 @@ export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json
           createdAt: userValues.createdAt.toDate().toISOString(),
           updatedAt: userValues.updatedAt.toDate().toISOString()
         } : null,
-        soulWorkExercises: soulWorkExercises.map(exercise => ({
-          ...exercise,
-          completedAt: exercise.completedAt.toDate().toISOString(),
-          createdAt: exercise.createdAt.toDate().toISOString()
-        })),
         analytics: analytics.map(analytic => ({
           ...analytic,
           date: analytic.date.toDate().toISOString(),
@@ -484,7 +444,6 @@ export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json
         totalEmotionLogs: emotionLogs.length,
         totalJournalEntries: journalEntries.length,
         totalValues: userValues?.values?.length || 0,
-        totalSoulWorkExercises: soulWorkExercises.length,
         totalAnalytics: analytics.length
       }
     };
@@ -664,10 +623,13 @@ export const saveJournalEntryWithFiles = async (
 };
 
 
-/* ---------- DRAFT-FIRST JOURNAL SYSTEM ---------- */
+/* ---------- LEGACY DRAFT SYSTEM (DEPRECATED - USE MOMENTS) ---------- */
+// NOTE: These functions are deprecated. New drafts should use the unified Moment system.
+// Keeping for backward compatibility only.
 
 // Create initial draft entry when user starts typing/adding content
 export const createDraftEntry = async (userId: string, initialData: Partial<JournalEntry> = {}) => {
+  console.warn('[DEPRECATED] createDraftEntry - Use MomentClient.createMoment with journalData.isDraft=true instead');
   try {
     const docRef = await addDoc(collection(db, 'users', userId, 'journalEntries'), {
       userId,
@@ -687,16 +649,17 @@ export const createDraftEntry = async (userId: string, initialData: Partial<Jour
       ...initialData
     });
     
-    console.log('Draft entry created:', docRef.id);
+    console.log('Legacy draft entry created:', docRef.id);
     return docRef.id;
   } catch (error) {
-    console.error('Error creating draft entry:', error);
+    console.error('Error creating legacy draft entry:', error);
     throw error;
   }
 };
 
 // Auto-save changes to existing draft
 export const autosaveEntry = async (userId: string, entryId: string, updates: Partial<JournalEntry>) => {
+  console.warn('[DEPRECATED] autosaveEntry - Use moment update API instead');
   try {
     const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
     await updateDoc(docRef, {
@@ -704,15 +667,16 @@ export const autosaveEntry = async (userId: string, entryId: string, updates: Pa
       updatedAt: serverTimestamp()
     });
     
-    console.log('Entry autosaved:', entryId);
+    console.log('Legacy entry autosaved:', entryId);
   } catch (error) {
-    console.error('Error autosaving entry:', error);
+    console.error('Error autosaving legacy entry:', error);
     throw error;
   }
 };
 
 // Finalize draft (mark as published)
 export const finalizeDraft = async (userId: string, entryId: string) => {
+  console.warn('[DEPRECATED] finalizeDraft - Use moment update API instead');
   try {
     const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
     await updateDoc(docRef, {
@@ -720,21 +684,22 @@ export const finalizeDraft = async (userId: string, entryId: string) => {
       updatedAt: serverTimestamp()
     });
     
-    console.log('Draft finalized:', entryId);
+    console.log('Legacy draft finalized:', entryId);
   } catch (error) {
-    console.error('Error finalizing draft:', error);
+    console.error('Error finalizing legacy draft:', error);
     throw error;
   }
 };
 
 // Load entry for editing (works for both drafts and published entries)
 export const loadEntryForEdit = async (userId: string, entryId: string): Promise<JournalEntry | null> => {
+  console.warn('[DEPRECATED] loadEntryForEdit - Use getMoment instead');
   try {
     const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
-      console.warn('Entry not found:', entryId);
+      console.warn('Legacy entry not found:', entryId);
       return null;
     }
     
@@ -747,7 +712,7 @@ export const loadEntryForEdit = async (userId: string, entryId: string): Promise
       updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt)
     } as JournalEntry;
   } catch (error) {
-    console.error('Error loading entry for edit:', error);
+    console.error('Error loading legacy entry for edit:', error);
     throw error;
   }
 };

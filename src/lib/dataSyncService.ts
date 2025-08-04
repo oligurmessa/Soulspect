@@ -2,7 +2,6 @@ import { vectorDb } from './vectorDb';
 import { 
   EmotionLog, 
   JournalEntry, 
-  SoulWorkExercise,
   SoulspaceItem 
 } from './dbHelpers';
 
@@ -83,19 +82,7 @@ export class DataSyncService {
     }
   }
 
-  // Index soul work exercise
-  static async indexSoulWorkExercise(userId: string, exercise: SoulWorkExercise): Promise<void> {
-    if (!exercise.id) return;
-    
-    try {
-      await vectorDb.indexItem(userId, exercise.id, exercise, 'soulwork');
-      console.log(`Indexed soul work exercise: ${exercise.id}`);
-    } catch (error) {
-      console.error('Error indexing soul work exercise:', error);
-    }
-  }
-
-  // Index soulspace item
+// Index soulspace item
   static async indexSoulspaceItem(userId: string, item: SoulspaceItem): Promise<void> {
     if (!item.id || !item.content) return;
     
@@ -121,7 +108,7 @@ export class DataSyncService {
   static async batchSync(userId: string, items: Array<{
     id: string;
     data: any;
-    type: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat' | 'soulwork';
+    type: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat';
   }>): Promise<void> {
     try {
       await vectorDb.batchIndex(userId, items);

@@ -12,6 +12,7 @@ import { motion } from "framer-motion"
 import EmotionVisualizer from "@/components/EmotionsVisualizer";
 import { useAuth } from "@/context/AuthContext"
 import { addEmotionLog } from "@/lib/dbHelpers"
+import { createUnifiedMoment } from "@/lib/momentClient"
 import Selector from "./EmotionSelector"
 
 interface EmotionLogDrawerProps {
@@ -53,12 +54,38 @@ export function EmotionLogDrawer({ open, onOpenChange, onEmotionLogged }: Emotio
     setIsSubmitting(true)
     
     try {
+      // Create unified moment for emotion log with optimized vector integration
+      const intensity = Math.round(((mood + 1) / 7) * 10); // Convert 0-6 to 1-10 scale
+      const emotionContent = `Mood: ${mood}/6
+Emotions: ${selectedEmotions.join(', ')}
+${selectedTriggers.length > 0 ? `Triggers: ${selectedTriggers.join(', ')}` : ''}
+${context ? `Context: ${context}` : ''}
+Intensity: ${intensity}/10`;
+
+      // Create the moment with enhanced metadata for better AI insights
+      const momentId = await createUnifiedMoment(
+        user.uid,
+        'emotion',
+        undefined, // no title for emotion logs
+        emotionContent,
+        {
+          mood,
+          emotions: selectedEmotions,
+          triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
+          intensity,
+          tags: ['emotion-log', ...selectedEmotions], // Enhanced tagging for better search
+        }
+      );
+      
+      console.log('Emotion moment created and auto-indexed:', momentId);
+
+      // Also create legacy emotion log for backward compatibility
       await addEmotionLog(user.uid, {
         mood,
         emotions: selectedEmotions,
         context: context || undefined,
         triggers: selectedTriggers.length > 0 ? selectedTriggers : undefined,
-        intensity: Math.round(((mood + 1) / 7) * 10), // Convert 0-6 to 1-10 scale
+        intensity,
       })
 
       toast({
@@ -69,7 +96,6 @@ export function EmotionLogDrawer({ open, onOpenChange, onEmotionLogged }: Emotio
       // Call the callback to add to carousel
       if (onEmotionLogged && selectedEmotions.length > 0) {
         const primaryEmotion = selectedEmotions[0] // Use the first selected emotion
-        const intensity = Math.round(((mood + 1) / 7) * 10) // Convert 0-6 to 1-10 scale
         onEmotionLogged(primaryEmotion, intensity, context || undefined)
       }
 

@@ -35,13 +35,15 @@ import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
 import * as React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getEmotionLogs, getJournalEntries, type EmotionLog, type JournalEntry as DBJournalEntry } from "@/lib/dbHelpers";
+import { MomentClient } from "@/lib/momentClient";
+import { type Moment } from "@/lib/moments";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 interface JournalHistoryEntry {
   id: string;
   date: string;
-  type: 'emotion' | 'journal';
+  type: 'emotion' | 'journal' | 'voice' | 'photo' | 'video' | 'chat';
   entryType?: 'text' | 'voice' | 'video';
   title?: string;
   content?: string;
@@ -52,6 +54,7 @@ interface JournalHistoryEntry {
   intensity?: number;
   isDraft?: boolean;
   attachments?: string[];
+  // Legacy carousel content for backward compatibility
   carouselContent?: {
     photos: Array<{
       id: string | number;
@@ -77,6 +80,11 @@ interface JournalHistoryEntry {
       audioUrl?: string;
     }>;
   };
+  // Moment-specific data
+  momentType?: Moment['type'];
+  tags?: string[];
+  location?: string;
+  weather?: string;
 }
 
 // Mock data removed - will be replaced with database fetches
@@ -96,44 +104,80 @@ export default function JournalHistoryPage() {
   const [selectedEntry, setSelectedEntry] = React.useState<JournalHistoryEntry | null>(null);
   const [selectedImage, setSelectedImage] = React.useState<{url: string, name: string} | null>(null);
 
-  // Fetch data from database
+  // Fetch data from database - prioritize moments, fallback to legacy
   React.useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [emotionLogs, journalEntries] = await Promise.all([
-          getEmotionLogs(user.uid, 100),
-          getJournalEntries(user.uid, 100)
-        ]);
+        let combinedData: JournalHistoryEntry[] = [];
+        
+        // Try to get moments first (new unified structure)
+        try {
+          const moments = await MomentClient.getMoments(user.uid, { limit: 200 });
+          
+          if (moments.length > 0) {
+            console.log(`Found ${moments.length} moments, using new structure`);
+            combinedData = moments.map((moment: Moment) => ({
+              id: moment.id || '',
+              date: moment.timestamp.toDate().toISOString().split('T')[0],
+              type: moment.type,
+              momentType: moment.type,
+              title: moment.title,
+              content: moment.content,
+              mood: moment.mood,
+              emotions: moment.emotions,
+              triggers: moment.triggers,
+              intensity: moment.intensity,
+              attachments: moment.attachments,
+              tags: moment.tags,
+              location: moment.location,
+              weather: moment.weather,
+              // Map journal-specific data
+              entryType: moment.journalData?.entryType,
+              isDraft: moment.journalData?.isDraft,
+              // Map emotion-specific data
+              context: moment.emotionData?.context,
+            }));
+          }
+        } catch (momentError) {
+          console.log('No moments found, falling back to legacy data');
+        }
+        
+        // Fallback to legacy data if no moments found
+        if (combinedData.length === 0) {
+          const [emotionLogs, journalEntries] = await Promise.all([
+            getEmotionLogs(user.uid, 100),
+            getJournalEntries(user.uid, 100)
+          ]);
 
-        // Combine and transform data
-        const combinedData: JournalHistoryEntry[] = [
-          ...emotionLogs.map((log: EmotionLog) => ({
-            id: log.id || '',
-            date: log.createdAt.toDate().toISOString().split('T')[0],
-            type: 'emotion' as const,
-            mood: log.mood,
-            emotions: log.emotions,
-            triggers: log.triggers,
-            context: log.context,
-            intensity: log.intensity
-          })),
-          ...journalEntries.map((entry: DBJournalEntry) => ({
-            id: entry.id || '',
-            date: entry.date.toDate().toISOString().split('T')[0],
-            type: 'journal' as const,
-            entryType: entry.entryType,
-            title: entry.title,
-            content: entry.content,
-            mood: entry.mood,
-            emotions: entry.emotions,
-            isDraft: entry.isDraft,
-            attachments: entry.attachments,
-            carouselContent: entry.carouselContent
-          }))
-        ];
+          combinedData = [
+            ...emotionLogs.map((log: EmotionLog) => ({
+              id: log.id || '',
+              date: log.createdAt.toDate().toISOString().split('T')[0],
+              type: 'emotion' as const,
+              mood: log.mood,
+              emotions: log.emotions,
+              triggers: log.triggers,
+              context: log.context,
+              intensity: log.intensity
+            })),
+            ...journalEntries.map((entry: DBJournalEntry) => ({
+              id: entry.id || '',
+              date: entry.date.toDate().toISOString().split('T')[0],
+              type: 'journal' as const,
+              entryType: entry.entryType,
+              title: entry.title,
+              content: entry.content,
+              mood: entry.mood,
+              emotions: entry.emotions,
+              isDraft: entry.isDraft,
+              attachments: entry.attachments,
+              carouselContent: entry.carouselContent
+            }))
+          ];
+        }
 
         // Sort by date descending
         combinedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

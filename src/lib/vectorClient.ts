@@ -5,7 +5,7 @@ export class VectorClient {
     userId: string,
     itemId: string,
     data: any,
-    dataType: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat' | 'soulwork'
+    dataType: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat'
   ): Promise<void> {
     try {
       const response = await fetch('/api/vector/index', {
@@ -38,7 +38,7 @@ export class VectorClient {
     items: Array<{
       id: string;
       data: any;
-      type: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat' | 'soulwork';
+      type: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat';
     }>
   ): Promise<void> {
     try {

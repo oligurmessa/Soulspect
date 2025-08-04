@@ -6,7 +6,9 @@ import { TextEditorWrapper as MinimalTextEditor } from "@/components/text_editor
 import { VideoRecorder } from "@/components/VideoRecorder"
 import ItemCarousel, { type ItemCarouselRef } from "@/components/ItemCarousel"
 import { useAuth } from "@/context/AuthContext"
-import { saveJournalEntryWithFiles, updateJournalEntry, createDraftEntry, autosaveEntry, finalizeDraft, loadEntryForEdit, uploadJournalImage, uploadImageFile, uploadJournalFile } from "@/lib/dbHelpers"
+import { uploadJournalImage, uploadImageFile, uploadJournalFile, loadEntryForEdit } from "@/lib/dbHelpers"
+import { MomentClient, createUnifiedMoment, updateUnifiedMoment } from "@/lib/momentClient"
+import { Moment } from "@/lib/moments"
 import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -212,7 +214,7 @@ export default function JournalPage() {
   }, [title, initialState.title, content, initialState.content, videoBlob, initialState.videoBlob])
 
 
-  // Draft creation system - only for new entries (not editing)
+  // Draft creation system - only for new entries (not editing) - CREATE MOMENTS
   useEffect(() => {
     if (!user || loadingState !== 'loaded') return;
     
@@ -227,16 +229,25 @@ export default function JournalPage() {
     const createDraft = async () => {
       try {
         setIsAutosaving(true);
-        const entryId = await createDraftEntry(user.uid, {
+        
+        // Create moment instead of journal entry
+        const momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.uid,
+          type: 'journal',
           title: title.trim(),
           content: content.trim(),
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          date: Timestamp.fromDate(selectedDate)
-        });
-        setCurrentEntryId(entryId);
-        console.log('Draft created for new entry:', entryId);
+          timestamp: Timestamp.fromDate(selectedDate),
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: true
+          }
+        };
+        
+        const momentId = await MomentClient.createMoment(momentData, false); // Don't index draft yet
+        setCurrentEntryId(momentId);
+        console.log('Draft moment created:', momentId);
       } catch (error) {
-        console.error('Error creating draft:', error);
+        console.error('Error creating draft moment:', error);
       } finally {
         setIsAutosaving(false);
       }
@@ -245,7 +256,7 @@ export default function JournalPage() {
     createDraft();
   }, [user, title, content, videoBlob, selectedMode, selectedDate, currentEntryId, isEditing, loadingState])
 
-  // Separate autosave for title changes only
+  // Separate autosave for title changes only - UPDATE MOMENTS
   useEffect(() => {
     if (!user || !currentEntryId || loadingState !== 'loaded') return;
     if (isEditing) return; // Don't autosave when editing existing entries
@@ -253,11 +264,10 @@ export default function JournalPage() {
     const timeoutId = setTimeout(async () => {
       try {
         setIsAutosaving(true);
-        await autosaveEntry(user.uid, currentEntryId, {
-          title: title.trim(),
-          // Don't update content, keep existing
-        });
-        console.log('Autosaved title:', currentEntryId);
+        await updateUnifiedMoment(currentEntryId, user.uid, {
+          title: title.trim()
+        }, false); // Don't re-index for title changes
+        console.log('Autosaved title for moment:', currentEntryId);
       } catch (error) {
         console.error('Error autosaving title:', error);
       } finally {
@@ -268,7 +278,7 @@ export default function JournalPage() {
     return () => clearTimeout(timeoutId);
   }, [user, title, currentEntryId, isEditing, loadingState])
 
-  // Separate autosave for content changes only
+  // Separate autosave for content changes only - UPDATE MOMENTS
   useEffect(() => {
     if (!user || !currentEntryId || loadingState !== 'loaded') return;
     if (isEditing) return; // Don't autosave when editing existing entries
@@ -276,11 +286,10 @@ export default function JournalPage() {
     const timeoutId = setTimeout(async () => {
       try {
         setIsAutosaving(true);
-        await autosaveEntry(user.uid, currentEntryId, {
-          content: content.trim(),
-          // Don't update title, keep existing
-        });
-        console.log('Autosaved content:', currentEntryId);
+        await updateUnifiedMoment(currentEntryId, user.uid, {
+          content: content.trim()
+        }, false); // Don't re-index for content changes alone
+        console.log('Autosaved content for moment:', currentEntryId);
       } catch (error) {
         console.error('Error autosaving content:', error);
       } finally {
@@ -291,7 +300,7 @@ export default function JournalPage() {
     return () => clearTimeout(timeoutId);
   }, [user, content, currentEntryId, isEditing, loadingState])
 
-  // Separate autosave for other changes (mode, date, video)
+  // Separate autosave for other changes (mode, date, video) - UPDATE MOMENTS
   useEffect(() => {
     if (!user || !currentEntryId || loadingState !== 'loaded') return;
     if (isEditing) return; // Don't autosave when editing existing entries
@@ -307,38 +316,31 @@ export default function JournalPage() {
           audioRecordings: []
         };
         
-        await autosaveEntry(user.uid, currentEntryId, {
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          date: Timestamp.fromDate(selectedDate),
-          carouselContent: {
-            photos: carouselItems.photos.map(photo => ({
-              id: photo.id,
-              name: photo.name,
-              caption: photo.caption || "",
-              // Don't save base64 URLs in autosave to avoid size limits
-              url: photo.url.startsWith('data:') ? '' : photo.url,
-              createdAt: new Date().toISOString()
-            })),
-            emotions: carouselItems.emotions.map(emotion => ({
-              id: emotion.id,
-              emotion: emotion.emotion,
-              intensity: emotion.intensity,
-              note: emotion.note || "",
-              emotions: emotion.emotions || [],
-              triggers: emotion.triggers || [],
-              createdAt: emotion.createdAt.toISOString()
-            })),
-            audioRecordings: carouselItems.audioRecordings.map(audio => ({
-              id: audio.id,
-              transcript: audio.transcript || "",
-              duration: audio.duration,
-              createdAt: audio.createdAt.toISOString(),
-              audioUrl: audio.audioUrl
-            }))
-          }
-        });
+        // Extract emotions and metadata for moment
+        const emotions = carouselItems.emotions.map(e => e.emotion);
+        const triggers = carouselItems.emotions.flatMap(e => e.triggers || []);
+        const moodValues = carouselItems.emotions.map(e => e.intensity);
+        const averageMood = moodValues.length > 0 ? moodValues.reduce((a, b) => a + b, 0) / moodValues.length : undefined;
         
-        console.log('Autosaved metadata:', currentEntryId);
+        // Prepare attachments (photos and audio URLs)
+        const attachments = [
+          ...carouselItems.photos.map(p => p.url).filter(url => !url.startsWith('data:')),
+          ...carouselItems.audioRecordings.map(a => a.audioUrl).filter(Boolean)
+        ];
+        
+        await updateUnifiedMoment(currentEntryId, user.uid, {
+          timestamp: { toDate: () => selectedDate } as any,
+          mood: averageMood,
+          emotions: emotions.length > 0 ? emotions : undefined,
+          triggers: triggers.length > 0 ? [...new Set(triggers)] : undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: true
+          }
+        }, false); // Don't re-index during autosave
+        
+        console.log('Autosaved metadata for moment:', currentEntryId);
       } catch (error) {
         console.error('Error autosaving metadata:', error);
       } finally {
@@ -376,122 +378,110 @@ export default function JournalPage() {
 
     setIsSaving(true)
     try {
-      // If we have an existing entry (draft or editing), finalize it
+      // Create/update moment in unified system
       if (currentEntryId || editingEntryId) {
-        const entryId = currentEntryId || editingEntryId!;
+        const momentId = currentEntryId || editingEntryId!;
         
-        // Photos should already be uploaded, just use them as-is
-        const uploadedPhotos = carouselItems.photos;
+        // Extract emotions from carousel for moment metadata
+        const emotions = carouselItems.emotions.map(e => e.emotion);
+        const triggers = carouselItems.emotions.flatMap(e => e.triggers || []);
+        const moodValues = carouselItems.emotions.map(e => e.intensity);
+        const averageMood = moodValues.length > 0 ? moodValues.reduce((a, b) => a + b, 0) / moodValues.length : undefined;
         
-        // First, do a final autosave with all current data
-        const entryData = {
+        // Prepare attachments
+        let attachments: string[] = [];
+        if (videoBlob) {
+          const videoUrl = await uploadJournalFile(user.uid, videoBlob, momentId, 'video');
+          attachments.push(videoUrl);
+        }
+        
+        // Add photo URLs to attachments
+        attachments.push(...carouselItems.photos.map(p => p.url).filter(url => !url.startsWith('data:')));
+        
+        // Add audio URLs to attachments
+        attachments.push(...carouselItems.audioRecordings.map(a => a.audioUrl).filter(Boolean));
+        
+        // Create comprehensive moment data
+        const momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.uid,
+          type: 'journal',
           title: title.trim() || "Untitled Entry",
           content: content || "",
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          date: Timestamp.fromDate(selectedDate),
-          carouselContent: {
-            photos: uploadedPhotos.map(photo => ({
-              id: photo.id,
-              name: photo.name,
-              caption: photo.caption || "",
-              url: photo.url,
-              createdAt: new Date().toISOString()
-            })),
-            emotions: carouselItems.emotions.map(emotion => ({
-              id: emotion.id,
-              emotion: emotion.emotion,
-              intensity: emotion.intensity,
-              note: emotion.note || "",
-              emotions: emotion.emotions || [],
-              triggers: emotion.triggers || [],
-              createdAt: emotion.createdAt.toISOString()
-            })),
-            audioRecordings: carouselItems.audioRecordings.map(audio => ({
-              id: audio.id,
-              transcript: audio.transcript || "",
-              duration: audio.duration,
-              createdAt: audio.createdAt.toISOString(),
-              audioUrl: audio.audioUrl
-            }))
+          timestamp: Timestamp.fromDate(selectedDate),
+          mood: averageMood,
+          emotions: emotions.length > 0 ? emotions : undefined,
+          triggers: triggers.length > 0 ? [...new Set(triggers)] : undefined, // Remove duplicates
+          attachments: attachments.length > 0 ? attachments : undefined,
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: saveAsDraft
           }
         };
         
-        // Handle video files if they exist (audio is now uploaded immediately)
-        const files: { videoBlob?: Blob } = {}
-        if (videoBlob) files.videoBlob = videoBlob
-        
-        // Handle video files if they exist (audio is now uploaded immediately)
-        if (files.videoBlob) {
-          const videoUrl = await uploadJournalFile(user.uid, files.videoBlob, entryId, 'video');
-          await autosaveEntry(user.uid, entryId, {
-            ...entryData,
-            attachments: [videoUrl],
-            isDraft: saveAsDraft
-          });
-        } else {
-          // Just update the existing entry (images and audio already have URLs)
-          await autosaveEntry(user.uid, entryId, entryData);
-        }
-        
-        // Finalize the draft (mark as published) unless saving as draft
+        // Update existing moment or create new if finalizing
         if (!saveAsDraft) {
-          await finalizeDraft(user.uid, entryId);
+          try {
+            // Update the existing moment and mark as published
+            await updateUnifiedMoment(momentId, user.uid, {
+              ...momentData,
+              journalData: {
+                ...momentData.journalData!,
+                isDraft: false
+              }
+            }, true); // Index for search when published
+            console.log('Moment published and indexed');
+          } catch (error) {
+            console.error('Error updating/publishing moment:', error);
+            throw error;
+          }
+        } else {
+          // Just update as draft
+          await updateUnifiedMoment(momentId, user.uid, momentData, false);
         }
         
         toast.success(isEditing ? 
           (saveAsDraft ? "Draft updated!" : "Entry updated!") : 
           (saveAsDraft ? "Draft saved!" : "Entry published!"));
       } else {
-        // This shouldn't happen with the new system, but fallback to old method
-        console.warn('No current entry ID - falling back to old save method');
+        // Fallback - create new moment directly
+        console.log('Creating new moment directly');
         
-        // Photos should already be uploaded through ItemCarousel
-        const uploadedPhotos = carouselItems.photos;
+        // Extract emotion data
+        const emotions = carouselItems.emotions.map(e => e.emotion);
+        const triggers = carouselItems.emotions.flatMap(e => e.triggers || []);
+        const moodValues = carouselItems.emotions.map(e => e.intensity);
+        const averageMood = moodValues.length > 0 ? moodValues.reduce((a, b) => a + b, 0) / moodValues.length : undefined;
         
-        const entryData = {
+        // Prepare attachments
+        let attachments: string[] = [];
+        if (videoBlob) {
+          // Create temporary entry ID for file upload
+          const tempId = `temp_${Date.now()}`;
+          const videoUrl = await uploadJournalFile(user.uid, videoBlob, tempId, 'video');
+          attachments.push(videoUrl);
+        }
+        
+        // Add photo and audio URLs
+        attachments.push(...carouselItems.photos.map(p => p.url).filter(url => !url.startsWith('data:')));
+        attachments.push(...carouselItems.audioRecordings.map(a => a.audioUrl).filter(Boolean));
+        
+        const momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.uid,
+          type: 'journal',
           title: title.trim() || "Untitled Entry",
           content: content || "",
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          isDraft: saveAsDraft,
-          date: Timestamp.fromDate(selectedDate),
-          attachments: [] as string[],
-          carouselContent: {
-            photos: uploadedPhotos.map(photo => ({
-              id: photo.id,
-              name: photo.name,
-              caption: photo.caption || "",
-              url: photo.url,
-              createdAt: new Date().toISOString()
-            })),
-            emotions: carouselItems.emotions.map(emotion => ({
-              id: emotion.id,
-              emotion: emotion.emotion,
-              intensity: emotion.intensity,
-              note: emotion.note || "",
-              emotions: emotion.emotions || [],
-              triggers: emotion.triggers || [],
-              createdAt: emotion.createdAt.toISOString()
-            })),
-            audioRecordings: carouselItems.audioRecordings.map(audio => ({
-              id: audio.id,
-              transcript: audio.transcript || "",
-              duration: audio.duration,
-              createdAt: audio.createdAt.toISOString(),
-              audioUrl: audio.audioUrl
-            }))
+          timestamp: Timestamp.fromDate(selectedDate),
+          mood: averageMood,
+          emotions: emotions.length > 0 ? emotions : undefined,
+          triggers: triggers.length > 0 ? [...new Set(triggers)] : undefined,
+          attachments: attachments.length > 0 ? attachments : undefined,
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: saveAsDraft
           }
         };
         
-        const files: { videoBlob?: Blob; audioBlobs?: { id: string | number; blob: Blob }[] } = {}
-        if (videoBlob) files.videoBlob = videoBlob
-        if (carouselItems.audioRecordings.length > 0) {
-          files.audioBlobs = carouselItems.audioRecordings.map(audio => ({
-            id: audio.id,
-            blob: audio.audioBlob
-          }))
-        }
-        
-        await saveJournalEntryWithFiles(user.uid, entryData, files);
+        await MomentClient.createMoment(momentData, !saveAsDraft); // Only index published moments
         toast.success(saveAsDraft ? "Draft saved!" : "Entry published!");
       }
       
@@ -554,14 +544,21 @@ export default function JournalPage() {
       // Upload audio immediately like images
       let entryId = currentEntryId || editingEntryId;
       
-      // Create entry if needed (for new entries)
+      // Create moment if needed (for new entries)
       if (!entryId && !isEditing) {
-        entryId = await createDraftEntry(user.uid, {
+        const momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.uid,
+          type: 'journal',
           title: title.trim() || "untitled",
           content: content.trim(),
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          date: Timestamp.fromDate(selectedDate)
-        });
+          timestamp: Timestamp.fromDate(selectedDate),
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: true
+          }
+        };
+        
+        entryId = await MomentClient.createMoment(momentData, false);
         setCurrentEntryId(entryId);
       }
       
@@ -614,19 +611,27 @@ export default function JournalPage() {
     }
     
     try {
-      // If no current entry exists, create a draft first
+      // If no current entry exists, create a draft moment first
       let entryId = currentEntryId || editingEntryId;
       console.log('Current entry ID:', entryId, 'isEditing:', isEditing);
       
       if (!entryId && !isEditing) {
-        console.log('Creating new draft entry for image upload...');
-        entryId = await createDraftEntry(user.uid, {
+        console.log('Creating new draft moment for image upload...');
+        
+        const momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
+          userId: user.uid,
+          type: 'journal',
           title: title.trim() || "untitled",
           content: content.trim(),
-          entryType: selectedMode.toLowerCase() as 'text' | 'video',
-          date: Timestamp.fromDate(selectedDate)
-        });
-        console.log('Created draft entry:', entryId);
+          timestamp: Timestamp.fromDate(selectedDate),
+          journalData: {
+            entryType: selectedMode.toLowerCase() as 'text' | 'video',
+            isDraft: true
+          }
+        };
+        
+        entryId = await MomentClient.createMoment(momentData, false); // Don't index draft
+        console.log('Created draft moment:', entryId);
         setCurrentEntryId(entryId);
       }
       

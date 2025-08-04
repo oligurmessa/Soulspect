@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EnhancedAIClient, VectorClient } from '@/lib/vectorClient';
 import { useAuth } from '@/context/AuthContext';
+import { createUnifiedMoment } from '@/lib/momentClient';
+import VectorSystem from '@/lib/vectorSystem';
 
 interface Message {
   id: string;
@@ -243,24 +245,55 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
     }
 
     try {
+      console.log('Generating AI response for:', { content, type, userId: user.uid });
       const insight = await EnhancedAIClient.generateResponse(
         user.uid,
         content,
         type || 'normal'
       );
+      console.log('AI response received:', { 
+        hasResponse: !!insight.response, 
+        hasPatterns: !!insight.patterns?.length,
+        hasSuggestions: !!insight.suggestions?.length,
+        hasRelatedEntries: !!insight.relatedEntries?.length
+      });
 
-      // Store chat history in vector DB
-      await VectorClient.indexItem(
-        user.uid,
-        `chat_${Date.now()}`,
-        {
-          userMessage: content,
-          aiResponse: insight.response,
-          mode: type || 'normal',
-          timestamp: Date.now(),
-        },
-        'chat'
-      );
+      // Store chat history as a moment in the optimized unified structure
+      try {
+        const chatContent = `User: ${content}\n\nAI Response: ${insight.response}`;
+        
+        const momentId = await createUnifiedMoment(
+          user.uid,
+          'chat',
+          undefined, // no title for chats
+          chatContent,
+          {
+            tags: [type || 'normal'],
+          }
+        );
+        
+        console.log('Chat moment created and auto-indexed:', momentId);
+      } catch (momentError) {
+        console.warn('Error storing chat as moment:', momentError);
+        
+        // Fallback to legacy vector storage (non-blocking)
+        try {
+          await VectorClient.indexItem(
+            user.uid,
+            `chat_${Date.now()}`,
+            {
+              userMessage: content,
+              aiResponse: insight.response,
+              mode: type || 'normal',
+              timestamp: Date.now(),
+            },
+            'chat'
+          );
+        } catch (vectorError) {
+          console.warn('Vector indexing also failed:', vectorError);
+          // Continue anyway - don't block the chat experience
+        }
+      }
 
       return {
         id: (Date.now() + 1).toString(),
@@ -274,12 +307,14 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
     } catch (error) {
       console.error('Error generating enhanced response:', error);
       
-      // Fallback to basic response
+      console.error('AI response generation failed, using fallback:', error);
+      
+      // Fallback to basic response without assumptions
       const fallbackResponses = {
-        explore: "I sense you're reaching into deeper layers of awareness. What patterns do you notice emerging as you reflect on this?",
-        release: "Releasing can be both liberating and challenging. What would it feel like to let this go completely?",
-        decide: "Decisions become clearer when we align with your deeper knowing. What does your intuition whisper about this choice?",
-        normal: "Thank you for sharing that with me. I'm here to support your journey of self-discovery."
+        explore: "I'm here to help you explore what's on your mind. What aspects of this situation feel most important to you right now?",
+        release: "It sounds like you're working through something challenging. What would feel most supportive for you in this moment?",
+        decide: "Making decisions can feel complex. What factors are you considering as you think through this choice?",
+        normal: "Thank you for sharing that with me. I'm here to listen and support you. What would be most helpful for you right now?"
       };
 
       return {
@@ -313,10 +348,10 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
       const aiMessage = await generateEnhancedResponse(cleanedContent, messageType);
       setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
-      console.error('Error generating AI response:', error);
+      console.error('Error in handleSendMessage:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm having trouble responding right now. Please try again in a moment.",
+        content: "I'm having trouble connecting right now, but I'm here to listen. Could you try rephrasing your question?",
         sender: 'ai',
         timestamp: new Date(),
       };

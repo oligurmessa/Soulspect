@@ -6,24 +6,25 @@ import {
   SoulspaceItem,
   User 
 } from './dbHelpers';
+import { Moment, VectorMetadata as MomentVectorMetadata } from './moments';
 
 // Lazy initialization to avoid build errors
 let pinecone: Pinecone | null = null;
 let openai: OpenAI | null = null;
 
 const getPinecone = () => {
-  if (!pinecone && process.env.NEXT_PUBLIC_PINECONE_API_KEY) {
+  if (!pinecone && (process.env.PINECONE_API_KEY || process.env.NEXT_PUBLIC_PINECONE_API_KEY)) {
     pinecone = new Pinecone({
-      apiKey: process.env.NEXT_PUBLIC_PINECONE_API_KEY,
+      apiKey: process.env.PINECONE_API_KEY || process.env.NEXT_PUBLIC_PINECONE_API_KEY!,
     });
   }
   return pinecone;
 };
 
 const getOpenAI = () => {
-  if (!openai && process.env.NEXT_PUBLIC_OPENAI_API_KEY) {
+  if (!openai && (process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY)) {
     openai = new OpenAI({
-      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+      apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY!,
     });
   }
   return openai;
@@ -32,13 +33,13 @@ const getOpenAI = () => {
 // Constants
 const INDEX_NAME = 'soulspect-index';
 const EMBEDDING_MODEL = 'text-embedding-3-large';
-const EMBEDDING_DIMENSIONS = 1024;
+const EMBEDDING_DIMENSIONS = 3072;
 const NAMESPACE_PREFIX = 'user_';
 
-// Vector metadata interface
-interface VectorMetadata {
+// Legacy vector metadata interface for backward compatibility
+interface LegacyVectorMetadata {
   userId: string;
-  dataType: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat' | 'soulwork';
+  dataType: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat';
   timestamp: number;
   // Original data references
   originalId: string;
@@ -50,6 +51,9 @@ interface VectorMetadata {
   // Content preview
   preview?: string;
 }
+
+// Use the new VectorMetadata from moments.ts
+type VectorMetadata = LegacyVectorMetadata;
 
 export class VectorDbService {
   private index: any;
@@ -80,7 +84,7 @@ export class VectorDbService {
       if (!pc) return;
       await pc.createIndex({
         name: INDEX_NAME,
-        dimension: 1536, // OpenAI embedding dimension
+        dimension: 3072, // OpenAI text-embedding-3-large dimension
         metric: 'cosine',
         spec: {
           serverless: {
@@ -111,7 +115,6 @@ export class VectorDbService {
       const response = await ai.embeddings.create({
         input: text,
         model: EMBEDDING_MODEL,
-        dimensions: EMBEDDING_DIMENSIONS,
       });
       return response.data[0].embedding;
     } catch (error) {
@@ -120,8 +123,23 @@ export class VectorDbService {
     }
   }
 
-  // Format content for embedding
+  // Format content for embedding - supports both legacy data and new Moment structure
   private formatContentForEmbedding(data: any, type: VectorMetadata['dataType']): string {
+    // Handle new Moment structure
+    if (data.type && typeof data === 'object' && 'content' in data) {
+      const moment = data as Moment;
+      let content = `${moment.type.toUpperCase()}: ${moment.title || ''}\n\n${moment.content}`;
+      
+      if (moment.mood) content += `\n\nMood: ${moment.mood}/6`;
+      if (moment.emotions?.length) content += `\nEmotions: ${moment.emotions.join(', ')}`;
+      if (moment.triggers?.length) content += `\nTriggers: ${moment.triggers.join(', ')}`;
+      if (moment.tags?.length) content += `\nTags: ${moment.tags.join(', ')}`;
+      if (moment.intensity) content += `\nIntensity: ${moment.intensity}/10`;
+      
+      return content;
+    }
+    
+    // Legacy format handling
     switch (type) {
       case 'journal':
         const journal = data as JournalEntry;
@@ -139,9 +157,6 @@ export class VectorDbService {
       
       case 'chat':
         return `AI Chat:\nUser: ${data.userMessage}\nAI Response: ${data.aiResponse}\nMode: ${data.mode || 'normal'}`;
-      
-      case 'soulwork':
-        return `Soul Work Exercise: ${data.title}\nType: ${data.exerciseType}\nResponses: ${JSON.stringify(data.responses)}`;
       
       default:
         return JSON.stringify(data);
@@ -167,8 +182,15 @@ export class VectorDbService {
         preview: content.substring(0, 200),
       };
 
-      // Add type-specific metadata
-      if (dataType === 'journal' || dataType === 'emotion') {
+      // Add type-specific metadata - handle both legacy and new Moment structure
+      if (data.type && typeof data === 'object' && 'mood' in data) {
+        // New Moment structure
+        const moment = data as Moment;
+        metadata.mood = moment.mood;
+        metadata.emotions = moment.emotions;
+        metadata.triggers = moment.triggers;
+      } else if (dataType === 'journal' || dataType === 'emotion') {
+        // Legacy structure
         metadata.mood = data.mood;
         metadata.emotions = data.emotions;
         metadata.triggers = data.triggers;

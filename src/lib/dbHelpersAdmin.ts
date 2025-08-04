@@ -2,10 +2,8 @@
 import { 
   getEmotionLogs as getEmotionLogsClient,
   getJournalEntries as getJournalEntriesClient,
-  getSoulWorkExercises as getSoulWorkExercisesClient,
   EmotionLog, 
-  JournalEntry, 
-  SoulWorkExercise 
+  JournalEntry
 } from "./dbHelpers";
 
 /* ---------- SERVER-SIDE FUNCTIONS (Using Client SDK) ---------- */
@@ -14,4 +12,3 @@ import {
 // This avoids Firebase Admin SDK authentication issues
 export const getEmotionLogsAdmin = getEmotionLogsClient;
 export const getJournalEntriesAdmin = getJournalEntriesClient;
-export const getSoulWorkExercisesAdmin = getSoulWorkExercisesClient;

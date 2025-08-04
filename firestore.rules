@@ -58,16 +58,6 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidJournalEntry(request.resource.data);
       }
       
-      // Soul work exercises subcollection
-      match /soulWorkExercises/{exerciseId} {
-        allow read, write: if isOwner(userId);
-        allow create: if isOwner(userId) && 
-                         request.resource.data.keys().hasAll(['userId', 'exerciseType', 'title', 'responses', 'duration', 'completedAt', 'createdAt']) &&
-                         request.resource.data.exerciseType in ['shadow-work', 'inner-child', 'values', 'purpose'] &&
-                         request.resource.data.duration is number &&
-                         request.resource.data.duration >= 0;
-      }
-      
       // User values subcollection
       match /values/{valueId} {
         allow read, write: if isOwner(userId);
@@ -92,12 +82,61 @@ service cloud.firestore {
       match /analytics/{analyticsId} {
         allow read, write: if isOwner(userId);
         allow create: if isOwner(userId) && 
-                         request.resource.data.keys().hasAll(['userId', 'period', 'date', 'emotionStats', 'journalStats', 'soulWorkStats', 'createdAt']) &&
+                         request.resource.data.keys().hasAll(['userId', 'period', 'date', 'emotionStats', 'journalStats', 'createdAt']) &&
                          request.resource.data.period in ['daily', 'weekly', 'monthly'] &&
                          request.resource.data.emotionStats is map &&
-                         request.resource.data.journalStats is map &&
-                         request.resource.data.soulWorkStats is map;
+                         request.resource.data.journalStats is map;
       }
+    }
+    
+    // Unified moments collection (top level for server access)
+    match /moments/{momentId} {
+      // Allow read if user owns the moment
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow create if user is creating their own moment with valid data
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId &&
+                       request.resource.data.keys().hasAll(['userId', 'type', 'content', 'timestamp']) &&
+                       request.resource.data.type in ['journal', 'emotion', 'voice', 'photo', 'video', 'chat'] &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.content is string;
+      
+      // Allow update if user owns the moment
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow delete if user owns the moment
+      allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+    
+    // Keep legacy moments subcollection for backward compatibility
+    match /users/{userId}/moments/{momentId} {
+      allow read, write: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+                       request.resource.data.keys().hasAll(['userId', 'type', 'content', 'timestamp', 'createdAt', 'updatedAt']) &&
+                       request.resource.data.type in ['journal', 'emotion', 'voice', 'photo', 'video', 'chat'] &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.content is string;
+      allow update: if isOwner(userId);
+    }
+    
+    // Vector metadata collection (top level for server access)
+    match /vectorMetadata/{metadataId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId &&
+                       request.resource.data.keys().hasAll(['userId', 'momentId']) &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.momentId is string;
+    }
+    
+    // Keep legacy vectorMetadata subcollection for backward compatibility
+    match /users/{userId}/vectorMetadata/{metadataId} {
+      allow read, write: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+                       request.resource.data.keys().hasAll(['userId', 'momentId']) &&
+                       request.resource.data.userId is string &&
+                       request.resource.data.momentId is string;
     }
     
     // Deny all other access
