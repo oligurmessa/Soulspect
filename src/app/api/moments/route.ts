@@ -99,12 +99,36 @@ export async function GET(request: NextRequest) {
     console.log(`[API] After filtering: ${filteredMoments.length} moments`);
     
     // Serialize Firestore Timestamps to ISO strings for frontend consumption
-    const serializedMoments = filteredMoments.map(moment => ({
-      ...moment,
-      timestamp: moment.timestamp?.toDate?.() ? moment.timestamp.toDate().toISOString() : moment.timestamp,
-      createdAt: moment.createdAt?.toDate?.() ? moment.createdAt.toDate().toISOString() : moment.createdAt,
-      updatedAt: moment.updatedAt?.toDate?.() ? moment.updatedAt.toDate().toISOString() : moment.updatedAt,
-    }));
+    const serializedMoments = filteredMoments.map(moment => {
+      const serialized = { ...moment };
+      
+      // Handle Firestore Timestamp objects or plain objects with seconds/nanoseconds
+      if (moment.timestamp) {
+        if (typeof moment.timestamp.toDate === 'function') {
+          serialized.timestamp = moment.timestamp.toDate().toISOString();
+        } else if (moment.timestamp.seconds) {
+          serialized.timestamp = new Date(moment.timestamp.seconds * 1000).toISOString();
+        }
+      }
+      
+      if (moment.createdAt) {
+        if (typeof moment.createdAt.toDate === 'function') {
+          serialized.createdAt = moment.createdAt.toDate().toISOString();
+        } else if (moment.createdAt.seconds) {
+          serialized.createdAt = new Date(moment.createdAt.seconds * 1000).toISOString();
+        }
+      }
+      
+      if (moment.updatedAt) {
+        if (typeof moment.updatedAt.toDate === 'function') {
+          serialized.updatedAt = moment.updatedAt.toDate().toISOString();
+        } else if (moment.updatedAt.seconds) {
+          serialized.updatedAt = new Date(moment.updatedAt.seconds * 1000).toISOString();
+        }
+      }
+      
+      return serialized;
+    });
     
     console.log(`[API] Returning ${serializedMoments.length} serialized moments to frontend`);
     console.log(`[API] Sample moment structure:`, serializedMoments[0] ? {
