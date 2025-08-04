@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     
     // Serialize Firestore Timestamps to ISO strings for frontend consumption
     const serializedMoments = filteredMoments.map(moment => {
-      const serialized = { ...moment };
+      const serialized = { ...moment } as any;
       
       // Handle Firestore Timestamp objects or plain objects with seconds/nanoseconds
       if (moment.timestamp) {
