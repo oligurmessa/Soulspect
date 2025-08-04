@@ -3,13 +3,14 @@
  * This module should only be imported in API routes or server-side code
  */
 
-import { Moment, createVectorMetadata, getVectorMetadata, updateVectorMetadata } from './moments';
+import { Moment, VectorMetadata } from './moments';
 import { Timestamp } from '@firebase/firestore';
 
 // Lazy imports to avoid client-side issues
 let vectorDbService: any = null;
 let pineconeClient: any = null;
 let openaiClient: any = null;
+let firebaseAdminDb: any = null;
 
 const initializeVectorServices = async () => {
   if (vectorDbService) return vectorDbService;
@@ -18,6 +19,17 @@ const initializeVectorServices = async () => {
     // Only import these on the server side
     const { Pinecone } = await import('@pinecone-database/pinecone');
     const OpenAI = await import('openai');
+    
+    // Initialize Firebase Admin
+    if (!firebaseAdminDb) {
+      try {
+        const { adminDb } = await import('./firebaseAdmin');
+        firebaseAdminDb = adminDb;
+        console.log('✅ Firebase Admin initialized for server operations');
+      } catch (error) {
+        console.warn('Firebase Admin not available, using client SDK:', error);
+      }
+    }
 
     if (process.env.PINECONE_API_KEY || process.env.NEXT_PUBLIC_PINECONE_API_KEY) {
       pineconeClient = new Pinecone({
@@ -37,6 +49,7 @@ const initializeVectorServices = async () => {
       pinecone: pineconeClient,
       openai: openaiClient,
       index: pineconeClient?.index('soulspect-index'),
+      db: firebaseAdminDb,
     };
 
     return vectorDbService;
@@ -182,12 +195,8 @@ export class ServerVectorService {
       // Check if already indexed (unless forcing)
       let existingMetadata = null;
       try {
-        // Use client SDK for now to check metadata
-        const response = await fetch(`/api/vector-system/metadata?userId=${moment.userId}&momentId=${moment.id}`);
-        if (response.ok) {
-          const metadataResult = await response.json();
-          existingMetadata = metadataResult.metadata;
-        }
+        // Use server-specific function for better performance
+        existingMetadata = await getVectorMetadataServer(moment.userId, moment.id);
       } catch (error) {
         console.warn('Could not check existing metadata:', error);
       }
@@ -210,15 +219,26 @@ export class ServerVectorService {
         if (moment.timestamp && typeof moment.timestamp.toDate === 'function') {
           momentDate = moment.timestamp.toDate();
         } else if (moment.timestamp) {
-          momentDate = new Date(moment.timestamp as any);
+          // Handle various timestamp formats
+          const timestampValue = typeof moment.timestamp === 'object' && 'seconds' in moment.timestamp 
+            ? moment.timestamp.seconds * 1000 
+            : moment.timestamp;
+          momentDate = new Date(timestampValue as any);
         } else {
           momentDate = new Date(); // Fallback to current time
+        }
+        
+        // Validate the date is actually valid
+        if (isNaN(momentDate.getTime())) {
+          console.warn('Invalid date parsed, using current time');
+          momentDate = new Date();
         }
       } catch (error) {
         console.warn('Error parsing timestamp, using current time:', error);
         momentDate = new Date();
       }
-        
+      
+      // Create time context with validation
       const timeContext = {
         timestamp: momentDate.getTime(),
         dayOfWeek: momentDate.getDay(),
@@ -228,49 +248,56 @@ export class ServerVectorService {
       
       console.log('Time context:', timeContext);
       console.log('Moment date:', momentDate);
+      
+      // Validate time context values
+      if (isNaN(timeContext.timestamp) || isNaN(timeContext.dayOfWeek) || isNaN(timeContext.hourOfDay)) {
+        throw new Error('Invalid time context values generated');
+      }
 
-      // Index in Pinecone with safe metadata
+      // Index in Pinecone with sanitized metadata
       const metadata: any = {
         userId: moment.userId,
         momentId: moment.id,
         momentType: moment.type,
         timestamp: timeContext.timestamp,
         preview: searchableText.substring(0, 200),
+        dayOfWeek: timeContext.dayOfWeek,
+        hourOfDay: timeContext.hourOfDay,
+        season: timeContext.season,
       };
 
       // Add optional fields only if they exist and are valid
-      if (moment.mood !== undefined && moment.mood !== null) {
+      if (this.isValidMetadataValue(moment.mood)) {
         metadata.mood = moment.mood;
       }
-      if (moment.emotions && Array.isArray(moment.emotions)) {
+      if (moment.emotions && Array.isArray(moment.emotions) && moment.emotions.length > 0) {
         metadata.emotions = moment.emotions;
       }
-      if (moment.triggers && Array.isArray(moment.triggers)) {
+      if (moment.triggers && Array.isArray(moment.triggers) && moment.triggers.length > 0) {
         metadata.triggers = moment.triggers;
       }
-      if (moment.tags && Array.isArray(moment.tags)) {
+      if (moment.tags && Array.isArray(moment.tags) && moment.tags.length > 0) {
         metadata.tags = moment.tags;
       }
-      if (timeContext.dayOfWeek !== undefined && timeContext.dayOfWeek !== null) {
-        metadata.dayOfWeek = timeContext.dayOfWeek;
+      if (this.isValidMetadataValue(moment.intensity)) {
+        metadata.intensity = moment.intensity;
       }
-      if (timeContext.hourOfDay !== undefined && timeContext.hourOfDay !== null) {
-        metadata.hourOfDay = timeContext.hourOfDay;
-      }
-      if (timeContext.season) {
-        metadata.season = timeContext.season;
-      }
+      
+      // Sanitize all metadata values before sending to Pinecone
+      const sanitizedMetadata = this.sanitizeMetadata(metadata);
+      console.log('Sanitized metadata for Pinecone:', sanitizedMetadata);
 
       await services.index.namespace(NAMESPACE_PREFIX + moment.userId).upsert([
         {
           id: vectorId,
           values: embedding,
-          metadata,
+          metadata: sanitizedMetadata,
         },
       ]);
 
-      // Update/create vector metadata via API endpoint
+      // Update/create vector metadata directly in database
       try {
+        const emotionContext = this.createEmotionContext(moment);
         const metadataPayload = {
           userId: moment.userId,
           momentId: moment.id,
@@ -281,7 +308,7 @@ export class ServerVectorService {
           contentPreview: searchableText.substring(0, 200),
           searchableText: searchableText.toLowerCase(),
           momentType: moment.type,
-          emotionContext: this.createEmotionContext(moment),
+          ...(emotionContext && { emotionContext }), // Only include if not undefined
           timeContext: {
             timestamp: Timestamp.fromDate(momentDate),
             dayOfWeek: timeContext.dayOfWeek,
@@ -290,14 +317,10 @@ export class ServerVectorService {
           },
         };
         
-        const metadataResponse = await fetch('/api/vector-system/metadata', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(metadataPayload),
-        });
-        
-        if (!metadataResponse.ok) {
-          console.warn('Failed to update vector metadata:', await metadataResponse.text());
+        if (existingMetadata) {
+          await updateVectorMetadataServer(moment.userId, existingMetadata.id!, metadataPayload);
+        } else {
+          await createVectorMetadataServer(metadataPayload);
         }
       } catch (error) {
         console.warn('Error updating vector metadata:', error);
@@ -411,13 +434,10 @@ export class ServerVectorService {
 
     try {
       // Import dynamically to avoid circular dependency
-      const { getMomentsServer } = await import('./moments-server');
+      const { getMomentsServer } = await import('./dbHelpersServer');
       const { calculateTextSimilarity } = await import('./vectorSystem');
       
-      const moments = await getMomentsServer(userId, { 
-        limit: 500,
-        type: options.type 
-      });
+      const moments = await getMomentsServer(userId, 500);
 
       const results = moments
         .filter(moment => moment.id)
@@ -463,7 +483,134 @@ export class ServerVectorService {
     if (month >= 8 && month <= 10) return 'fall';
     return 'winter';
   }
+
+  // Helper to validate metadata values for Pinecone
+  private static isValidMetadataValue(value: any): boolean {
+    return value !== null && value !== undefined && !Number.isNaN(value);
+  }
+
+  // Sanitize metadata for Pinecone (removes null, undefined, NaN values)
+  private static sanitizeMetadata(metadata: any): any {
+    const sanitized: any = {};
+    
+    for (const [key, value] of Object.entries(metadata)) {
+      if (Array.isArray(value)) {
+        // For arrays, only include if non-empty and all elements are valid
+        const validArray = value.filter(item => this.isValidMetadataValue(item));
+        if (validArray.length > 0) {
+          sanitized[key] = validArray;
+        }
+      } else if (this.isValidMetadataValue(value)) {
+        sanitized[key] = value;
+      }
+      // Skip null, undefined, NaN values
+    }
+    
+    return sanitized;
+  }
 }
+
+/* ---------- SERVER-SPECIFIC FIRESTORE OPERATIONS ---------- */
+
+// Server-specific vector metadata operations using top-level collection
+const getVectorMetadataServer = async (userId: string, momentId: string): Promise<VectorMetadata | null> => {
+  const services = await initializeVectorServices();
+  
+  // Try Firebase Admin if available
+  if (services?.db) {
+    try {
+      const snapshot = await services.db.collection('vectorMetadata')
+        .where('userId', '==', userId)
+        .where('momentId', '==', momentId)
+        .limit(1)
+        .get();
+      
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as VectorMetadata;
+      }
+    } catch (error) {
+      console.warn('Firebase Admin query failed, falling back to client SDK:', error);
+    }
+  }
+  
+  // Fallback to client SDK with subcollection
+  try {
+    const { getVectorMetadata } = await import('./moments');
+    return await getVectorMetadata(userId, momentId);
+  } catch (error) {
+    console.error('Failed to get vector metadata:', error);
+    return null;
+  }
+};
+
+const createVectorMetadataServer = async (metadata: Omit<VectorMetadata, 'id' | 'lastUpdated'>): Promise<string> => {
+  const services = await initializeVectorServices();
+  
+  const metadataData = {
+    ...metadata,
+    lastUpdated: new Date(), // Use Date for Admin SDK
+  };
+  
+  // Try Firebase Admin if available (top-level collection)
+  if (services?.db) {
+    try {
+      const docRef = await services.db.collection('vectorMetadata').add(metadataData);
+      console.log('✅ Created vector metadata in top-level collection:', docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.warn('Firebase Admin create failed, falling back to client SDK:', error);
+    }
+  }
+  
+  // Fallback to client SDK with subcollection
+  try {
+    const { createVectorMetadata } = await import('./moments');
+    return await createVectorMetadata({
+      ...metadata,
+      lastUpdated: Timestamp.now(), // Use Timestamp for client SDK
+    } as any);
+  } catch (error) {
+    console.error('Failed to create vector metadata:', error);
+    throw error;
+  }
+};
+
+const updateVectorMetadataServer = async (
+  userId: string, 
+  metadataId: string, 
+  updates: Partial<VectorMetadata>
+): Promise<void> => {
+  const services = await initializeVectorServices();
+  
+  const updateData = {
+    ...updates,
+    lastUpdated: new Date(), // Use Date for Admin SDK
+  };
+  
+  // Try Firebase Admin if available (top-level collection)
+  if (services?.db) {
+    try {
+      await services.db.collection('vectorMetadata').doc(metadataId).update(updateData);
+      console.log('✅ Updated vector metadata in top-level collection:', metadataId);
+      return;
+    } catch (error) {
+      console.warn('Firebase Admin update failed, falling back to client SDK:', error);
+    }
+  }
+  
+  // Fallback to client SDK with subcollection
+  try {
+    const { updateVectorMetadata } = await import('./moments');
+    await updateVectorMetadata(userId, metadataId, {
+      ...updates,
+      lastUpdated: Timestamp.now(), // Use Timestamp for client SDK
+    } as any);
+  } catch (error) {
+    console.error('Failed to update vector metadata:', error);
+    throw error;
+  }
+};
 
 // Export the class as default
 export default ServerVectorService;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMomentServer, getMomentsServer, getMomentServer } from '@/lib/dbHelpersServer';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
-import VectorSystem from '@/lib/vectorSystem';
+import ServerVectorService from '@/lib/serverVectorService';
 import { Moment } from '@/lib/moments';
 
 // Create a new moment
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       try {
         const moment = await getMomentServer(momentData.userId, momentId);
         if (moment) {
-          await VectorSystem.indexMoment(moment);
+          await ServerVectorService.indexMoment(moment);
         }
       } catch (indexError) {
         console.error('Error indexing moment:', indexError);
@@ -92,11 +92,30 @@ export async function GET(request: NextRequest) {
     
     // Use server helpers to get moments
     const moments = await getMomentsServer(userId, limit);
+    console.log(`[API] Retrieved ${moments.length} raw moments from database`);
     
     // Filter by type if specified
     const filteredMoments = type ? moments.filter(m => m.type === type) : moments;
+    console.log(`[API] After filtering: ${filteredMoments.length} moments`);
     
-    return NextResponse.json({ success: true, moments: filteredMoments });
+    // Serialize Firestore Timestamps to ISO strings for frontend consumption
+    const serializedMoments = filteredMoments.map(moment => ({
+      ...moment,
+      timestamp: moment.timestamp?.toDate?.() ? moment.timestamp.toDate().toISOString() : moment.timestamp,
+      createdAt: moment.createdAt?.toDate?.() ? moment.createdAt.toDate().toISOString() : moment.createdAt,
+      updatedAt: moment.updatedAt?.toDate?.() ? moment.updatedAt.toDate().toISOString() : moment.updatedAt,
+    }));
+    
+    console.log(`[API] Returning ${serializedMoments.length} serialized moments to frontend`);
+    console.log(`[API] Sample moment structure:`, serializedMoments[0] ? {
+      id: serializedMoments[0].id,
+      type: serializedMoments[0].type,
+      timestamp: serializedMoments[0].timestamp,
+      title: serializedMoments[0].title,
+      hasContent: !!serializedMoments[0].content
+    } : 'No moments to sample');
+    
+    return NextResponse.json({ success: true, moments: serializedMoments });
   } catch (error) {
     console.error('Error fetching moments:', error);
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });

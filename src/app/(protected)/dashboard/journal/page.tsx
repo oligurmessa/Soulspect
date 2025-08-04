@@ -30,7 +30,6 @@ import * as React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getEmotionLogs, getJournalEntries, type EmotionLog, type JournalEntry as DBJournalEntry } from "@/lib/dbHelpers";
 import { MomentClient } from "@/lib/momentClient";
-import { type Moment } from "@/lib/moments";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -114,13 +113,16 @@ export default function MomentsPage() {
         
         // Try to get moments first (new unified structure)
         try {
+          console.log(`[Journal] Fetching moments for user: ${user.uid}`);
           const moments = await MomentClient.getMoments(user.uid, { limit: 200 });
+          console.log(`[Journal] MomentClient returned:`, moments);
           
           if (moments.length > 0) {
-            console.log(`Found ${moments.length} moments, using new structure`);
-            combinedData = moments.map((moment: Moment) => ({
+            console.log(`[Journal] Found ${moments.length} moments, using new structure`);
+            console.log(`[Journal] Sample moment:`, moments[0]);
+            combinedData = moments.map((moment: Record<string, any>) => ({
               id: moment.id || '',
-              date: moment.timestamp.toDate(),
+              date: new Date(moment.timestamp), // Convert ISO string to Date
               type: moment.type,
               title: moment.title,
               content: moment.content,
@@ -140,7 +142,8 @@ export default function MomentsPage() {
             }));
           }
         } catch (momentError) {
-          console.log('No moments found, falling back to legacy data');
+          console.log('Error fetching moments or no moments found, falling back to legacy data:', momentError);
+          console.log('Moment fetch error details:', momentError);
         }
         
         // Fallback to legacy data if no moments found

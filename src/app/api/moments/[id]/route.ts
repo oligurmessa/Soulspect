@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateMomentServer, getMomentServer, deleteMomentServer } from '@/lib/dbHelpersServer';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
-import VectorSystem from '@/lib/vectorSystem';
+import ServerVectorService from '@/lib/serverVectorService';
 import { vectorDb } from '@/lib/vectorDb';
 import { Moment } from '@/lib/moments';
 
@@ -99,7 +99,7 @@ export async function PUT(
       try {
         const updatedMoment = await getMomentServer(momentData.userId, params.id);
         if (updatedMoment) {
-          await VectorSystem.indexMoment(updatedMoment);
+          await ServerVectorService.indexMoment(updatedMoment);
         }
       } catch (indexError) {
         console.error('Error re-indexing moment:', indexError);

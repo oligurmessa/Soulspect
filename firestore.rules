@@ -122,7 +122,10 @@ service cloud.firestore {
     
     // Vector metadata collection (top level for server access)
     match /vectorMetadata/{metadataId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Allow read/update/delete if user owns the metadata
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      
+      // Allow create if user is creating their own metadata
       allow create: if request.auth != null && 
                        request.auth.uid == request.resource.data.userId &&
                        request.resource.data.keys().hasAll(['userId', 'momentId']) &&

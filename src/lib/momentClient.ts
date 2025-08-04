@@ -30,24 +30,13 @@ export class MomentClient {
     const response = await fetch('/api/moments', {
       method: 'POST',
       headers,
-      body: JSON.stringify({ momentData, indexForSearch: false }), // We'll index separately
+      body: JSON.stringify({ momentData, indexForSearch }),
     });
 
     const result = await response.json();
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to create moment');
-    }
-
-    // Index for vector search using the optimized system
-    if (indexForSearch && result.momentId) {
-      try {
-        const fullMoment = { ...momentData, id: result.momentId } as Moment;
-        await VectorSystem.indexMoment(fullMoment);
-      } catch (indexError) {
-        console.warn('Vector indexing failed for new moment:', indexError);
-        // Don't fail the creation if indexing fails
-      }
     }
 
     return result.momentId;
@@ -70,6 +59,9 @@ export class MomentClient {
       headers,
     });
     const result = await response.json();
+    
+    console.log(`[MomentClient] API response:`, result);
+    console.log(`[MomentClient] Received ${result.moments?.length || 0} moments`);
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch moments');

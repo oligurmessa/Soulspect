@@ -82,28 +82,7 @@ export async function getMomentsServer(userId: string, limit: number = 100): Pro
     return moments;
   } catch (error) {
     console.error(`[SERVER] Error getting moments for ${userId}:`, error);
-    // Try fallback to subcollection
-    try {
-      console.log(`[SERVER] Trying fallback subcollection for user: ${userId}`);
-      const fallbackSnapshot = await adminDb
-        .collection('users')
-        .doc(userId)
-        .collection('moments')
-        .orderBy('timestamp', 'desc')
-        .limit(limit)
-        .get();
-
-      const fallbackMoments = fallbackSnapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Moment[];
-
-      console.log(`[SERVER] Found ${fallbackMoments.length} moments in subcollection`);
-      return fallbackMoments;
-    } catch (fallbackError) {
-      console.error(`[SERVER] Fallback also failed:`, fallbackError);
-      throw error;
-    }
+    throw error;
   }
 }
 
@@ -142,18 +121,6 @@ export async function getMomentServer(userId: string, momentId: string): Promise
       return { id: doc.id, ...doc.data() } as Moment;
     }
 
-    // Try subcollection fallback
-    const subDoc = await adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('moments')
-      .doc(momentId)
-      .get();
-
-    if (subDoc.exists) {
-      return { id: subDoc.id, ...subDoc.data() } as Moment;
-    }
-
     console.log(`[SERVER] Moment ${momentId} not found for user ${userId}`);
     return null;
   } catch (error) {
@@ -182,23 +149,6 @@ export async function updateMomentServer(userId: string, momentId: string, updat
       return;
     }
 
-    // Try subcollection fallback
-    const subMomentRef = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('moments')
-      .doc(momentId);
-    
-    const subMomentDoc = await subMomentRef.get();
-    if (subMomentDoc.exists) {
-      await subMomentRef.update({
-        ...updates,
-        updatedAt: new Date()
-      });
-      console.log(`[SERVER] Updated moment in subcollection: ${momentId}`);
-      return;
-    }
-
     throw new Error(`Moment ${momentId} not found for user ${userId}`);
   } catch (error) {
     console.error(`[SERVER] Error updating moment:`, error);
@@ -220,20 +170,6 @@ export async function deleteMomentServer(userId: string, momentId: string): Prom
     if (momentDoc.exists && momentDoc.data()?.userId === userId) {
       await momentRef.delete();
       console.log(`[SERVER] Deleted moment from top-level collection: ${momentId}`);
-      return;
-    }
-
-    // Try subcollection fallback
-    const subMomentRef = adminDb
-      .collection('users')
-      .doc(userId)
-      .collection('moments')
-      .doc(momentId);
-    
-    const subMomentDoc = await subMomentRef.get();
-    if (subMomentDoc.exists) {
-      await subMomentRef.delete();
-      console.log(`[SERVER] Deleted moment from subcollection: ${momentId}`);
       return;
     }
 
