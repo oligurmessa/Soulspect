@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, User, Brain, RotateCcw, Lightbulb, Minimize2, Sparkles } from 'lucide-react';
+import { X, Loader2, User, Brain, RotateCcw, Lightbulb, Maximize2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { AIInputWithLoading } from '@/components/AIInputWithLoading';
 import { EnhancedAIClient, VectorClient } from '@/lib/vectorClient';
 import { useAuth } from '@/context/AuthContext';
 import { createUnifiedMoment } from '@/lib/momentClient';
-import VectorSystem from '@/lib/vectorSystem';
 
 interface Message {
   id: string;
@@ -186,10 +186,9 @@ const TypingIndicator: React.FC = () => (
 
 export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPaneProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -326,11 +325,11 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isTyping || !user) return;
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim() || isTyping || !user) return;
 
-    const messageType = detectMessageType(inputValue);
-    const cleanedContent = cleanMessage(inputValue);
+    const messageType = detectMessageType(message);
+    const cleanedContent = cleanMessage(message);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -341,7 +340,6 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
     setIsTyping(true);
 
     try {
@@ -361,11 +359,10 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
+
+  const handleMaximize = () => {
+    router.push('/dashboard/soulspace');
+    onClose();
   };
 
   return (
@@ -377,7 +374,7 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
             opacity: 1, 
             x: 0, 
             y: 0,
-            height: isMinimized ? 'auto' : '500px'
+            height: '500px'
           }}
           exit={{ opacity: 0, x: 100, y: 50 }}
           transition={{ duration: 0.3, type: "spring", stiffness: 260, damping: 20 }}
@@ -390,18 +387,16 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
               <h3 className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
                 {isIndexing ? 'Indexing Data...' : 'soulspace'}
               </h3>
-              {isIndexing && (
-                <Sparkles className="w-3 h-3 text-orange-500 animate-pulse" />
-              )}
             </div>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsMinimized(!isMinimized)}
+                onClick={handleMaximize}
                 className="h-6 w-6 p-0 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                title="Open full Soulspace"
               >
-                <Minimize2 className="w-3 h-3" />
+                <Maximize2 className="w-3 h-3" />
               </Button>
               <Button
                 variant="ghost"
@@ -414,63 +409,43 @@ export default function FloatingChatPane({ isOpen, onClose }: FloatingChatPanePr
             </div>
           </div>
 
-          {!isMinimized && (
-            <>
-              {/* Messages */}
-              <div className="h-80 overflow-y-auto p-4 bg-zinc-50/50 dark:bg-zinc-900/50">
-                {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="mb-3">
-                      <Loader2 className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <h4 className="font-medium text-sm mb-1 text-zinc-900 dark:text-zinc-100">Welcome to Soulspace</h4>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      Share your thoughts and let AI guide you through reflection and discovery.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {messages.map((message) => (
-                      <MessageBubble key={message.id} message={message} />
-                    ))}
-                    <AnimatePresence>
-                      {isTyping && <TypingIndicator />}
-                    </AnimatePresence>
-                    <div ref={messagesEndRef} />
-                  </div>
-                )}
-              </div>
-
-              {/* Input */}
-              <div className="p-3 bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-zinc-800">
-                <div className="flex gap-2">
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Share what's on your mind..."
-                    className="flex-1 text-sm border-zinc-300 dark:border-zinc-600 focus:border-zinc-400 dark:focus:border-zinc-500"
-                    disabled={isTyping}
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isTyping}
-                    size="sm"
-                    className="px-3 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900"
-                  >
-                    {isTyping ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Send className="w-3 h-3" />
-                    )}
-                  </Button>
+          {/* Messages */}
+          <div className="h-80 overflow-y-auto p-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="mb-3">
+                  <Loader2 className="w-6 h-6 text-blue-400" />
                 </div>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 text-center">
-                  Private conversation • Data not stored
+                <h4 className="font-medium text-sm mb-1 text-zinc-900 dark:text-zinc-100">Welcome to Soulspace</h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Share your thoughts and let AI guide you through reflection and discovery.
                 </p>
               </div>
-            </>
-          )}
+            ) : (
+              <div className="space-y-1">
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
+                <AnimatePresence>
+                  {isTyping && <TypingIndicator />}
+                </AnimatePresence>
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="bg-white dark:bg-zinc-900">
+            <AIInputWithLoading
+              placeholder="Share what's on your mind..."
+              minHeight={44}
+              maxHeight={120}
+              onSubmit={handleSendMessage}
+              className="py-2 px-3"
+              loadingDuration={2000}
+              growDirection="up"
+            />
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

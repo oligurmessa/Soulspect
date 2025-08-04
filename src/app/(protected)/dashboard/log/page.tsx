@@ -792,9 +792,11 @@ export default function JournalPage() {
             </div>
           )}
         </div>
-              <div className="fixed bottom-8 right-8 z-50">
-        <Button03 onToggleChat={() => setIsChatOpen(!isChatOpen)} />
-      </div>
+              {!isChatOpen && (
+        <div className="fixed bottom-8 right-8 z-50">
+          <Button03 onToggleChat={() => setIsChatOpen(!isChatOpen)} />
+        </div>
+      )}
       </div>
 
       {/* Actionbar */}

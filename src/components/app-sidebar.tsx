@@ -25,13 +25,26 @@ import SettingsModal from "./SettingsModal";
 import LockDialog from "./LockDialog";
 import { useLock } from "@/context/LockContext";
 
-// Main navigation with Material Symbols icons
+// Import lucide-react icons
+import {
+  GalleryHorizontalEnd, // moments
+  House,                // home
+  Plus,                 // log
+  ChartNoAxesColumn,    // analytics
+  LoaderCircle,         // soulspace
+  Settings,
+  Lock,
+  LockOpen,
+  Shield,
+} from "lucide-react";
+
+// Main navigation with lucide-react icons
 const navMain = [
-  { title: "Home", href: "/dashboard", icon: "home" },
-  { title: "Log", href: "/dashboard/log", icon: "add" },
-  { title: "Journal", href: "/dashboard/journal", icon: "book_2" },
-  { title: "Analytics", href: "/dashboard/analytics", icon: "chart_data" },
-  { title: "Soulspace", href: "/dashboard/soulspace", icon: "splitscreen_left" },
+  { title: "Home", href: "/dashboard", icon: House },
+  { title: "Log", href: "/dashboard/log", icon: Plus },
+  { title: "Moments", href: "/dashboard/journal", icon: GalleryHorizontalEnd },
+  { title: "Analytics", href: "/dashboard/analytics", icon: ChartNoAxesColumn },
+  { title: "Soulspace", href: "/dashboard/soulspace", icon: LoaderCircle },
 ];
 
 export function AppSidebar() {
@@ -47,7 +60,7 @@ export function AppSidebar() {
       collapsible="icon"
       className={cn(
         "sidebar-custom bg-background/30 backdrop-blur-lg border-r border-border",
-        isCollapsed ? "w-20" : "w-64" // Change collapsed/expanded width here
+        isCollapsed ? "w-20" : "w-64"
       )}
     >
       {/* Sidebar Header */}
@@ -74,7 +87,7 @@ export function AppSidebar() {
             "transition-all duration-200"
           )}>
             <SidebarTrigger className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-secondary p-0">
-              <span className="material-symbols-outlined text-3xl">dashboard</span>
+              <House size={28} />
             </SidebarTrigger>
           </div>
           {/* Collapse/Expand Trigger (always right aligned) */}
@@ -83,7 +96,8 @@ export function AppSidebar() {
             !isCollapsed ? "opacity-100" : "opacity-0 pointer-events-none absolute"
           )}>
             <SidebarTrigger className="w-8 h-8 flex items-center justify-center rounded hover:bg-secondary p-0">
-              <span className="material-symbols-outlined text-2xl">side_navigation</span>
+              {/* You may want to use a menu or sidebar icon here */}
+              <LoaderCircle size={22} />
             </SidebarTrigger>
           </div>
         </div>
@@ -114,7 +128,7 @@ export function AppSidebar() {
                       : "justify-start gap-3 px-3 py-2 w-full"
                   )}
                 >
-                  <span className="material-symbols-outlined text-2xl flex-shrink-0">{item.icon}</span>
+                  <item.icon size={22} className="flex-shrink-0" />
                   <span className={cn(
                     "transition-all duration-200 overflow-hidden whitespace-nowrap",
                     isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
@@ -144,7 +158,7 @@ export function AppSidebar() {
                   ? "justify-center w-12 h-12 p-0"
                   : "justify-start gap-3 px-3 py-2 w-full"
               )}>
-                <span className="material-symbols-outlined text-2xl flex-shrink-0">settings</span>
+                <Settings size={22} className="flex-shrink-0" />
                 <span className={cn(
                   "transition-all duration-200 overflow-hidden whitespace-nowrap",
                   isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
@@ -178,9 +192,15 @@ export function AppSidebar() {
                     ? "justify-center w-12 h-12 p-0"
                     : "justify-start gap-3 px-3 py-2 w-full"
                 )}>
-                  <span className="material-symbols-outlined text-2xl flex-shrink-0">
-                    {hasPassword ? (isLocked ? "lock" : "lock_open") : "security"}
-                  </span>
+                  {hasPassword ? (
+                    isLocked ? (
+                      <Lock size={22} className="flex-shrink-0" />
+                    ) : (
+                      <LockOpen size={22} className="flex-shrink-0" />
+                    )
+                  ) : (
+                    <Shield size={22} className="flex-shrink-0" />
+                  )}
                   <span className={cn(
                     "transition-all duration-200 overflow-hidden whitespace-nowrap",
                     isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"

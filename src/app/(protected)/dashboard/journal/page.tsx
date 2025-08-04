@@ -1,37 +1,31 @@
 "use client";
 
-import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LiquidAudioPlayer } from "@/components/liquid-audio-player";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-
-import { useDataTable } from "@/hooks/use-data-table";
-import type { Column, ColumnDef } from "@tanstack/react-table";
 
 import {
   Smile,
   Frown,
   Meh,
-  MoreHorizontal,
-  Text,
-  CalendarDays,
+  Search,
+  Heart,
+  MessageSquare,
   Mic,
   Video,
   FileText,
+  ImageIcon,
+  Clock,
+  Edit,
+  SlidersHorizontal,
 } from "lucide-react";
-import { parseAsArrayOf, parseAsString, useQueryState } from "nuqs";
 import * as React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getEmotionLogs, getJournalEntries, type EmotionLog, type JournalEntry as DBJournalEntry } from "@/lib/dbHelpers";
@@ -39,10 +33,11 @@ import { MomentClient } from "@/lib/momentClient";
 import { type Moment } from "@/lib/moments";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
-interface JournalHistoryEntry {
+interface MomentEntry {
   id: string;
-  date: string;
+  date: Date;
   type: 'emotion' | 'journal' | 'voice' | 'photo' | 'video' | 'chat';
   entryType?: 'text' | 'voice' | 'video';
   title?: string;
@@ -54,6 +49,9 @@ interface JournalHistoryEntry {
   intensity?: number;
   isDraft?: boolean;
   attachments?: string[];
+  tags?: string[];
+  location?: string;
+  weather?: string;
   // Legacy carousel content for backward compatibility
   carouselContent?: {
     photos: Array<{
@@ -80,29 +78,30 @@ interface JournalHistoryEntry {
       audioUrl?: string;
     }>;
   };
-  // Moment-specific data
-  momentType?: Moment['type'];
-  tags?: string[];
-  location?: string;
-  weather?: string;
 }
 
-// Mock data removed - will be replaced with database fetches
+type FilterType = 'all' | 'journal' | 'emotion' | 'voice' | 'photo' | 'video' | 'chat';
+type SortType = 'newest' | 'oldest' | 'mood-high' | 'mood-low';
+type ViewMode = 'timeline' | 'grid' | 'list';
 
-export default function JournalHistoryPage() {
+export default function MomentsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [date] = useQueryState("date", parseAsString.withDefault(""));
-  const [entryType] = useQueryState(
-    "entryType",
-    parseAsArrayOf(parseAsString).withDefault([]),
-  );
   
-  const [data, setData] = React.useState<JournalHistoryEntry[]>([]);
+  const [data, setData] = React.useState<MomentEntry[]>([]);
+  const [filteredData, setFilteredData] = React.useState<MomentEntry[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
-  const [selectedEntry, setSelectedEntry] = React.useState<JournalHistoryEntry | null>(null);
+  const [selectedEntry, setSelectedEntry] = React.useState<MomentEntry | null>(null);
   const [selectedImage, setSelectedImage] = React.useState<{url: string, name: string} | null>(null);
+  
+  // Filter and view states
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filterType, setFilterType] = React.useState<FilterType>('all');
+  const [sortType, setSortType] = React.useState<SortType>('newest');
+  const [viewMode] = React.useState<ViewMode>('timeline');
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [selectedMood, setSelectedMood] = React.useState<number | null>(null);
 
   // Fetch data from database - prioritize moments, fallback to legacy
   React.useEffect(() => {
@@ -111,7 +110,7 @@ export default function JournalHistoryPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        let combinedData: JournalHistoryEntry[] = [];
+        let combinedData: MomentEntry[] = [];
         
         // Try to get moments first (new unified structure)
         try {
@@ -121,9 +120,8 @@ export default function JournalHistoryPage() {
             console.log(`Found ${moments.length} moments, using new structure`);
             combinedData = moments.map((moment: Moment) => ({
               id: moment.id || '',
-              date: moment.timestamp.toDate().toISOString().split('T')[0],
+              date: moment.timestamp.toDate(),
               type: moment.type,
-              momentType: moment.type,
               title: moment.title,
               content: moment.content,
               mood: moment.mood,
@@ -155,7 +153,7 @@ export default function JournalHistoryPage() {
           combinedData = [
             ...emotionLogs.map((log: EmotionLog) => ({
               id: log.id || '',
-              date: log.createdAt.toDate().toISOString().split('T')[0],
+              date: log.createdAt.toDate(),
               type: 'emotion' as const,
               mood: log.mood,
               emotions: log.emotions,
@@ -165,7 +163,7 @@ export default function JournalHistoryPage() {
             })),
             ...journalEntries.map((entry: DBJournalEntry) => ({
               id: entry.id || '',
-              date: entry.date.toDate().toISOString().split('T')[0],
+              date: entry.date.toDate(),
               type: 'journal' as const,
               entryType: entry.entryType,
               title: entry.title,
@@ -180,11 +178,11 @@ export default function JournalHistoryPage() {
         }
 
         // Sort by date descending
-        combinedData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        combinedData.sort((a, b) => b.date.getTime() - a.date.getTime());
         setData(combinedData);
       } catch (error) {
-        console.error('Error fetching journal history:', error);
-        toast.error('Failed to load journal history');
+        console.error('Error fetching moments:', error);
+        toast.error('Failed to load your moments');
       } finally {
         setIsLoading(false);
       }
@@ -193,214 +191,281 @@ export default function JournalHistoryPage() {
     fetchData();
   }, [user]);
 
-  const filteredData = React.useMemo(() => {
-    return data.filter((entry) => {
-      const matchesDate =
-        date === "" || entry.date.toLowerCase().includes(date.toLowerCase());
-      const matchesType =
-        entryType.length === 0 || 
-        (entry.type === 'journal' && entry.entryType && entryType.includes(entry.entryType)) ||
-        (entry.type === 'emotion' && entryType.includes('emotion'));
+  // Filter and sort data
+  React.useEffect(() => {
+    let filtered = [...data];
 
-      return matchesDate && matchesType;
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(entry => 
+        entry.title?.toLowerCase().includes(query) ||
+        entry.content?.toLowerCase().includes(query) ||
+        entry.emotions?.some(emotion => emotion.toLowerCase().includes(query)) ||
+        entry.triggers?.some(trigger => trigger.toLowerCase().includes(query)) ||
+        entry.tags?.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Apply type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(entry => entry.type === filterType);
+    }
+
+    // Apply mood filter
+    if (selectedMood !== null) {
+      filtered = filtered.filter(entry => entry.mood === selectedMood);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortType) {
+        case 'oldest':
+          return a.date.getTime() - b.date.getTime();
+        case 'mood-high':
+          return (b.mood || 0) - (a.mood || 0);
+        case 'mood-low':
+          return (a.mood || 0) - (b.mood || 0);
+        case 'newest':
+        default:
+          return b.date.getTime() - a.date.getTime();
+      }
     });
-  }, [data, date, entryType]);
 
-  const handleViewEntry = (entry: JournalHistoryEntry) => {
+    setFilteredData(filtered);
+  }, [data, searchQuery, filterType, selectedMood, sortType]);
+
+  const handleViewEntry = (entry: MomentEntry) => {
     setSelectedEntry(entry);
     setViewDialogOpen(true);
   };
 
-  const handleEditEntry = (entry: JournalHistoryEntry) => {
+  const handleEditEntry = (entry: MomentEntry) => {
     // Only allow editing journal entries, not emotion logs
     if (entry.type !== 'journal') {
       toast.error("Cannot edit emotion logs");
       return;
     }
 
-    // Navigate to log page with new Firebase URL approach
+    // Navigate to log page with edit parameter
     router.push('/dashboard/log?edit=' + entry.id);
   };
 
-  const columns = React.useMemo<ColumnDef<JournalHistoryEntry>[]>(
-    () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label="Select all"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        ),
-        size: 32,
-        enableSorting: false,
-        enableHiding: false,
-      },
-      {
-        id: "date",
-        accessorKey: "date",
-        header: ({ column }: { column: Column<JournalHistoryEntry, unknown> }) => (
-          <DataTableColumnHeader column={column} title="Date" />
-        ),
-        cell: ({ cell }) => <div>{cell.getValue<JournalHistoryEntry["date"]>()}</div>,
-        meta: {
-          label: "Date",
-          placeholder: "Search date...",
-          variant: "text",
-          icon: CalendarDays,
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: "type",
-        accessorKey: "type",
-        header: ({ column }: { column: Column<JournalHistoryEntry, unknown> }) => (
-          <DataTableColumnHeader column={column} title="Type" />
-        ),
-        cell: ({ row }) => {
-          const entry = row.original;
-          const Icon = entry.type === 'emotion' 
-            ? (entry.mood !== undefined && entry.mood <= 2 ? Frown : entry.mood !== undefined && entry.mood >= 5 ? Smile : Meh)
-            : entry.entryType === 'voice' ? Mic
-            : entry.entryType === 'video' ? Video
-            : FileText;
+  const getTypeIcon = (entry: MomentEntry) => {
+    switch (entry.type) {
+      case 'emotion':
+        return entry.mood !== undefined && entry.mood <= 2 ? Frown : 
+               entry.mood !== undefined && entry.mood >= 5 ? Smile : Meh;
+      case 'voice':
+        return Mic;
+      case 'video':
+        return Video;
+      case 'photo':
+        return ImageIcon;
+      case 'chat':
+        return MessageSquare;
+      default:
+        return FileText;
+    }
+  };
 
-          const label = entry.type === 'emotion' 
-            ? 'Emotion Log'
-            : entry.entryType === 'voice' ? 'Voice Journal'
-            : entry.entryType === 'video' ? 'Video Journal'
-            : 'Text Journal';
+  const getTypeLabel = (entry: MomentEntry) => {
+    switch (entry.type) {
+      case 'emotion':
+        return 'Emotion Log';
+      case 'voice':
+        return 'Voice Note';
+      case 'video':
+        return 'Video Entry';
+      case 'photo':
+        return 'Photo Memory';
+      case 'chat':
+        return 'AI Chat';
+      case 'journal':
+        return entry.entryType === 'voice' ? 'Voice Journal' : 
+               entry.entryType === 'video' ? 'Video Journal' : 'Text Journal';
+      default:
+        return 'Entry';
+    }
+  };
 
-          return (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Icon className="h-4 w-4" />
-              {label}
-            </Badge>
-          );
-        },
-        meta: {
-          label: "Type",
-          variant: "multiSelect",
-          options: [
-            { label: "Emotion Log", value: "emotion", icon: Meh },
-            { label: "Text Journal", value: "text", icon: FileText },
-            { label: "Voice Journal", value: "voice", icon: Mic },
-            { label: "Video Journal", value: "video", icon: Video },
-          ],
-        },
-        enableColumnFilter: true,
-      },
-      {
-        id: "content",
-        accessorKey: "content",
-        header: ({ column }: { column: Column<JournalHistoryEntry, unknown> }) => (
-          <DataTableColumnHeader column={column} title="Content" />
-        ),
-        cell: ({ row }) => {
-          const entry = row.original;
-          let displayContent = '';
-          let attachmentInfo = '';
-          
-          if (entry.type === 'emotion') {
-            const emotionText = entry.emotions?.join(', ') || '';
-            const triggerText = entry.triggers?.length ? ` (${entry.triggers.join(', ')})` : '';
-            const contextText = entry.context ? ` - ${entry.context}` : '';
-            displayContent = `${emotionText}${triggerText}${contextText}`;
-          } else {
-            displayContent = entry.title && entry.title !== 'untitled' && entry.title !== 'Untitled Entry'
-              ? entry.title
-              : entry.content?.substring(0, 100) + (entry.content && entry.content.length > 100 ? '...' : '') || '';
-            
-            // Add carousel content summary
-            if (entry.carouselContent) {
-              const { photos, emotions, audioRecordings } = entry.carouselContent;
-              const attachments = [];
-              if (photos?.length > 0) attachments.push(`${photos.length} photo${photos.length > 1 ? 's' : ''}`);
-              if (emotions?.length > 0) attachments.push(`${emotions.length} emotion${emotions.length > 1 ? 's' : ''}`);
-              if (audioRecordings?.length > 0) attachments.push(`${audioRecordings.length} audio${audioRecordings.length > 1 ? 's' : ''}`);
-              
-              if (attachments.length > 0) {
-                attachmentInfo = ` • ${attachments.join(', ')}`;
-              }
-            }
-          }
-          
-          return (
-            <div className="line-clamp-2 text-sm">
-              <div className="text-muted-foreground">
-                {displayContent || 'No content'}
-                {attachmentInfo && <span className="text-blue-600 font-medium">{attachmentInfo}</span>}
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
+  const groupMomentsByDate = (moments: MomentEntry[]) => {
+    const groups: { [key: string]: MomentEntry[] } = {};
+    
+    moments.forEach(moment => {
+      const dateKey = moment.date.toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(moment);
+    });
+    
+    return Object.entries(groups).map(([date, moments]) => ({
+      date: new Date(date),
+      moments: moments.sort((a, b) => b.date.getTime() - a.date.getTime())
+    }));
+  };
+
+  // Component rendering helpers
+  const renderMomentCard = (entry: MomentEntry) => {
+    const TypeIcon = getTypeIcon(entry);
+    const hasMedia = entry.attachments?.length || entry.carouselContent?.photos?.length || 
+                     entry.carouselContent?.audioRecordings?.length;
+    
+    return (
+      <Card key={entry.id} className="hover:bg-accent/50 transition-colors cursor-pointer group" 
+            onClick={() => handleViewEntry(entry)}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center",
+                entry.type === 'emotion' ? "bg-red-100 text-red-600" :
+                entry.type === 'journal' ? "bg-blue-100 text-blue-600" :
+                entry.type === 'voice' ? "bg-green-100 text-green-600" :
+                entry.type === 'video' ? "bg-purple-100 text-purple-600" :
+                entry.type === 'photo' ? "bg-yellow-100 text-yellow-600" :
+                "bg-gray-100 text-gray-600"
+              )}>
+                <TypeIcon className="w-5 h-5" />
               </div>
-              <div className="flex gap-1 mt-1">
-                {entry.isDraft && <Badge variant="secondary" className="text-xs">Draft</Badge>}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="text-xs">
+                    {getTypeLabel(entry)}
+                  </Badge>
+                  {entry.isDraft && (
+                    <Badge variant="secondary" className="text-xs">Draft</Badge>
+                  )}
+                  {hasMedia && (
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600">
+                      Media
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span>{formatRelativeTime(entry.date)}</span>
+                  {entry.mood !== undefined && (
+                    <>
+                      <Separator orientation="vertical" className="h-4" />
+                      <Heart className={cn(
+                        "w-4 h-4",
+                        entry.mood >= 4 ? "text-green-500" :
+                        entry.mood >= 3 ? "text-yellow-500" : "text-red-500"
+                      )} />
+                      <span>{entry.mood}/6</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {entry.type === 'journal' && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditEntry(entry);
+                    }}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
-          );
-        },
-      },
-      {
-        id: "actions",
-        cell: function Cell({ row }) {
-          const entry = row.original;
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {entry.title && (
+            <h3 className="font-medium mb-2 line-clamp-1">{entry.title}</h3>
+          )}
           
-          return (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem 
-                  onClick={() => handleViewEntry(entry)}
-                  className="cursor-pointer"
-                >
-                  View
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => handleEditEntry(entry)}
-                  className="cursor-pointer"
-                  disabled={entry.type === 'emotion'}
-                >
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600 hover:bg-red-50">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          );
-        },
-        size: 32,
-      },
-    ],
-    [],
-  );
-
-  const { table } = useDataTable({
-    data: filteredData,
-    columns,
-    pageCount: 1,
-    initialState: {
-      sorting: [{ id: "date", desc: true }],
-      columnPinning: { right: ["actions"] },
-    },
-    getRowId: (row) => row.id,
-  });
+          {entry.type === 'emotion' ? (
+            <div className="space-y-2">
+              {entry.emotions && entry.emotions.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {entry.emotions.slice(0, 3).map((emotion) => (
+                    <Badge key={emotion} variant="secondary" className="text-xs">
+                      {emotion}
+                    </Badge>
+                  ))}
+                  {entry.emotions.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{entry.emotions.length - 3} more
+                    </Badge>
+                  )}
+                </div>
+              )}
+              {entry.context && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {entry.context}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {entry.content && (
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {entry.content}
+                </p>
+              )}
+              
+              {/* Media previews */}
+              {entry.carouselContent?.photos && entry.carouselContent.photos.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {entry.carouselContent.photos.slice(0, 3).map((photo) => (
+                    <div key={photo.id} className="w-12 h-12 rounded overflow-hidden bg-gray-100">
+                      {photo.url && (
+                        <img 
+                          src={photo.url} 
+                          alt={photo.name}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                  ))}
+                  {entry.carouselContent.photos.length > 3 && (
+                    <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center text-xs text-muted-foreground">
+                      +{entry.carouselContent.photos.length - 3}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Tags */}
+          {entry.tags && entry.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {entry.tags.slice(0, 3).map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  #{tag}
+                </Badge>
+              ))}
+              {entry.tags.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{entry.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -413,26 +478,165 @@ export default function JournalHistoryPage() {
   if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Please log in to view your journal history.</p>
+        <p className="text-muted-foreground">Please log in to view your moments.</p>
       </div>
     );
   }
 
+  const groupedMoments = groupMomentsByDate(filteredData);
+
   return (
-    <div className="data-table-container">
-      <div className="mb-4">
-        <p className="text-muted-foreground">View your emotion logs and journal entries over time.</p>
+    <>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h1 className="text-2xl font-semibold">Your Moments</h1>
+            <p className="text-muted-foreground">
+              {filteredData.length} {filteredData.length === 1 ? 'moment' : 'moments'} captured
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Filters
+            </Button>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="p-4 space-y-4 border-b">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search moments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Filters */}
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Type Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Type</label>
+                <Tabs value={filterType} onValueChange={(value) => setFilterType(value as FilterType)}>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all" className="text-xs">All</TabsTrigger>
+                    <TabsTrigger value="journal" className="text-xs">Journal</TabsTrigger>
+                    <TabsTrigger value="emotion" className="text-xs">Emotion</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Sort */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Sort</label>
+                <Tabs value={sortType} onValueChange={(value) => setSortType(value as SortType)}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="newest" className="text-xs">Newest</TabsTrigger>
+                    <TabsTrigger value="oldest" className="text-xs">Oldest</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* Mood Filter */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Mood</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5, 6].map((mood) => (
+                    <Button
+                      key={mood}
+                      variant={selectedMood === mood ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedMood(selectedMood === mood ? null : mood)}
+                      className="w-8 h-8 p-0 text-xs"
+                    >
+                      {mood}
+                    </Button>
+                  ))}
+                  {selectedMood && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedMood(null)}
+                      className="text-xs"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-6">
+            {filteredData.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">No moments found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery ? 'Try adjusting your search terms' : 'Start capturing your moments in the Log page'}
+                </p>
+                {!searchQuery && (
+                  <Button onClick={() => router.push('/dashboard/log')}>
+                    Create Your First Moment
+                  </Button>
+                )}
+              </div>
+            ) : viewMode === 'timeline' ? (
+              /* Timeline View */
+              <div className="space-y-8">
+                {groupedMoments.map(({ date, moments }) => (
+                  <div key={date.toDateString()} className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-background border rounded-lg px-3 py-1">
+                        <span className="text-sm font-medium">
+                          {formatRelativeTime(date)}
+                        </span>
+                      </div>
+                      <Separator className="flex-1" />
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {moments.map(renderMomentCard)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Grid View */
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredData.map(renderMomentCard)}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
-      <DataTable table={table}>
-        <DataTableToolbar table={table} />
-      </DataTable>
 
       {/* Entry View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedEntry?.type === 'emotion' ? 'Emotion Log' : 'Journal Entry'} - {selectedEntry?.date}
+              {selectedEntry?.type === 'emotion' ? 'Emotion Log' : 
+               selectedEntry?.type === 'journal' ? 'Journal Entry' :
+               selectedEntry?.type === 'voice' ? 'Voice Note' :
+               selectedEntry?.type === 'video' ? 'Video Entry' :
+               selectedEntry?.type === 'photo' ? 'Photo Memory' :
+               selectedEntry?.type === 'chat' ? 'AI Conversation' : 'Entry'} - {selectedEntry?.date.toLocaleDateString()}
             </DialogTitle>
           </DialogHeader>
           
@@ -651,8 +855,8 @@ export default function JournalHistoryPage() {
         >
           <div className="relative max-w-full max-h-full">
             <img 
-              src={selectedImage.url} 
-              alt={selectedImage.name}
+              src={selectedImage?.url || ''} 
+              alt={selectedImage?.name || ''}
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
@@ -664,12 +868,12 @@ export default function JournalHistoryPage() {
             </button>
             <div className="absolute bottom-4 left-4 right-4 text-center">
               <p className="text-white text-sm bg-black/50 rounded px-2 py-1 inline-block">
-                {selectedImage.name}
+                {selectedImage?.name}
               </p>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

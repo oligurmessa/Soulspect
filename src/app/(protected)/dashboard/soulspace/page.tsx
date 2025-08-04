@@ -277,13 +277,7 @@ Respond as a compassionate guide in 1-3 sentences. Be authentic, insightful, and
               className="w-full"
             />
           </div>
-          
-          {/* Subtle indicator */}
-          <div className="text-center mt-2">
-            <p className="text-xs text-muted-foreground">
-              Data is not stored or shared. This is a private space for your thoughts.
-            </p>
-          </div>
+        
         </div>
       </div>
     </div>

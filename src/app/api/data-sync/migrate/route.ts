@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import UnifiedDataSync from '@/lib/unifiedDataSync';
+import { authenticateRequest } from '@/lib/firebaseServerAuth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'userId is required' },
         { status: 400 }
+      );
+    }
+
+    // Authenticate the request
+    const auth = await authenticateRequest(request, body);
+    if (!auth || auth.uid !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 

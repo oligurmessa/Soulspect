@@ -15,7 +15,7 @@ export default function ThreeDotsMenu({ className, onMenuItemClick }: ThreeDotsM
 
   const menuItems = [
     { id: "export", label: "Export Entry" },
-    { id: "duplicate", label: "Duplicate Entry" },
+    { id: "bookmark", label: "Bookmark Entry" },
     { id: "delete", label: "Delete Entry", danger: true },
   ];
 
