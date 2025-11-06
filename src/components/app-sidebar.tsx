@@ -75,7 +75,7 @@ export function AppSidebar() {
             )}
           >
             <img
-              src="/logo.png"
+              src="/clean_logo.png"
               alt="soulspect logo"
               className="h-8 w-8 rounded-full flex-shrink-0"
             />

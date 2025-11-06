@@ -48,7 +48,7 @@ const Footer: FC = () => {
               </span>
             </Link>
             <p className="text-muted-foreground mt-4 text-sm max-w-xs">
-              Unlock new potential.
+            your personal intelligence.
             </p>
           </div>
           <div className="grid grid-cols-2 md:col-span-2 gap-8">

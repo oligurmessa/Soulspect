@@ -1,6 +1,5 @@
 import React from "react";
-import { BarChart, Brain, Crosshair, Check, FileText, Rocket } from "lucide-react";
-
+import { BarChart, Brain, Crosshair, FileText, Lock, History } from "lucide-react";
 // Helper function for class names
 const cn = (...classes: (string | false | null | undefined)[]): string => classes.filter(Boolean).join(' ');
 
@@ -19,43 +18,48 @@ interface FeatureItem {
 
 // The main component for the features section with hover effects
 export function FeaturesSectionWithHoverEffects() {
-  // Your brand's features
+  // Soulspect features aligned to the 6 locked categories
   const features = [
-    {
-      title: "Emotion Tracking",
-      description: "Log and track your daily emotions with our intuitive interface.",
-      icon: <FileText className="w-8 h-8" />,
-    },
-    {
-      title: "AI-Powered Insights",
-      description: "Get personalized insights powered by Google Gemini AI.",
-      icon: <Brain className="w-8 h-8" />,
-    },
-    {
-      title: "Beautiful Analytics",
-      description: "Visualize your emotional patterns with stunning charts.",
-      icon: <BarChart className="w-8 h-8" />,
-    },
-    {
-      title: "Explore Subconscious",
-      description: "Dive deep into your subconscious mind with guided tools.",
-      icon: <Check className="w-8 h-8" />,
-    },
-    {
-      title: "Release & Reset",
-      description: "Let go of limiting beliefs and negative patterns.",
-      icon: <Rocket className="w-8 h-8" />,
-    },
+  {
+  title: "Capture Moments",
+  description: "Frictionless, multi-modal logging—text, audio, video, images—so memories are captured as life happens.",
+  icon: <Crosshair className="w-8 h-8" />,
+  },
+  {
+  title: "Documenting Your Life",
+  description: "Organize and preserve an authentic life archive with timelines, tags, and verified timestamps.",
+  icon: <FileText className="w-8 h-8" />,
+  },
+  {
+  title: "Security of Your Personal Data",
+  description: "End-to-end encryption, strict access controls, and integrity safeguards—your data remains yours.",
+  icon: <Lock className="w-8 h-8" />,
+  },
+  {
+  title: "Safe Personal Intelligence",
+  description: "Private AI analysis using open-source, highly capable models on protected infrastructure.",
+  icon: <Brain className="w-8 h-8" />,
+  },
+  {
+  title: "Relive & Re-Experience Moments",
+  description: "High-fidelity recall and immersive playback to re-experience meaningful moments—not just remember them.",
+  icon: <History className="w-8 h-8" />,
+  },
+  {
+  title: "Self-Assess & Self-Growth",
+  description: "Guided reflections, assessments, and feedback loops that translate insight into measurable progress.",
+  icon: <BarChart className="w-8 h-8" />,
+  },
   ];
-
+  
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 relative z-10 py-10 max-w-7xl mx-auto">
-      {features.map((feature, index) => (
-        <Feature key={feature.title} {...feature} index={index} />
-      ))}
-    </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 relative z-10 py-10 max-w-7xl mx-auto">
+  {features.map((feature, index) => (
+  <Feature key={feature.title} {...feature} index={index} />
+  ))}
+  </div>
   );
-}
+  }
 
 // The individual feature card component
 const Feature = ({

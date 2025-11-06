@@ -71,7 +71,7 @@ export default function AIButton({
                 <Loader2 className="h-5 w-5 animate-spin text-orange-400" /> 
             ) : (
                 <Image
-                    src="/logo.png" // Path to your image in the public folder
+                    src="/clean_logo.png" // Path to your image in the public folder
                     alt="AI Logo"
                     // Image dimensions slightly smaller than button to allow for padding/glow
                     width={40} 

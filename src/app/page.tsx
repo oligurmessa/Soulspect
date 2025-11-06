@@ -9,7 +9,6 @@ import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button";
 import BrandButton from "@/components/landing/button";
 import { InteractiveHoverButton } from "@/components/landing/interactive-hover-button";
-import { TypewriterEffectSmooth } from "@/components/landing/typewriter-effect"
 import Link from 'next/link';
 import Footer from "@/components/landing/footer";
 import Loading from "@/components/landing/loading";
@@ -28,62 +27,13 @@ const FeaturesSectionWithHoverEffects = dynamic(() => import('@/components/landi
   loading: () => <Loading />,
   ssr: false
 });
+
 const montserrat = Montserrat({
   weight: '700',
   subsets: ['latin'],
   display: 'swap',
 })
 
-const words = [
-  {
-    text: "Transform",
-    className: "text-orange-400 font-bold",
-  },
-  {
-    text: "your",
-    className: "text-orange-400 font-bold",
-  },
-  {
-    text: "inner",
-    className: "text-orange-400 font-bold",
-  },
-  {
-    text: "world",
-    className: "text-orange-400 font-bold",
-  },
-  {
-    text: "with",
-    className: "text-orange-400 font-bold",
-  },
-  {
-    text: "Soulspect.",
-    className: "text-orange-400 font-bold",
-  },
-];
-
-// Soulspect features array
-const features = [
-  {
-    title: "Emotion Tracking",
-    description: "Log and track your daily emotions with our intuitive interface.",
-  },
-  {
-    title: "AI-Powered Insights",
-    description: "Get personalized insights powered by Google Gemini AI.",
-  },
-  {
-    title: "Beautiful Analytics",
-    description: "Visualize your emotional patterns with stunning charts.",
-  },
-  {
-    title: "Explore Subconscious",
-    description: "Dive deep into your subconscious mind with guided tools.",
-  },
-  {
-    title: "Release & Reset",
-    description: "Let go of limiting beliefs and negative patterns.",
-  },
-];
 
 // Example socialLinks array
 const socialLinks = [
@@ -144,10 +94,9 @@ export default function HomePage() {
       <section className="py-20 lg:py-32">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-center text-center">
-            <p className="text-neutral-600 dark:text-neutral-200 text-xs sm:text-base mb-4">
-              Discover the power of emotional intelligence
+            <p className="text-neutral-600 dark:text-neutral-200 text-xl sm:text-3xl mb-4">
+            Personal memory, private intelligence, perceptible growth.
             </p>
-            <TypewriterEffectSmooth words={words} />
             <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-0 md:space-x-4 mt-8">
               <Link href="/dashboard">
                 <Button size="lg" className="dark w-40 h-12 rounded-xl bg-white/85 hover:bg-white">
@@ -162,15 +111,16 @@ export default function HomePage() {
         </div>
       </section>
 
+
       {/* Features Section */}
 <section id="features" className="py-20 lg:py-32">
   <div className="container mx-auto px-4">
     <div className="flex flex-col items-center text-center">
-      <h2 className="text-3xl md:text-5xl tracking-tighter font-bold">
-        Your Journey to Self-Discovery
+      <h2 className="text-3xl md:text-4xl tracking-tighter font-bold">
+      AI app made particularly for you.
       </h2>
       <p className="text-lg max-w-2xl mt-4 leading-relaxed tracking-tight text-muted-foreground">
-        Soulspect combines cutting-edge AI with proven psychological techniques to help you understand your emotions and transform your life.
+      The AI app for your mind and memories, built to preserve your life experiences, protect your data, enhance your self-understanding, and turn reflection into growth.
       </p>
     </div>
     
@@ -198,9 +148,9 @@ export default function HomePage() {
 
       {/* Content for the section */}
       <div className="flex flex-col gap-4 text-center md:text-left">
-        <h2 className="text-4xl font-semibold text-white">Ready to Transform Your Life?</h2>
+        <h2 className="text-4xl font-semibold text-white">Ready to Document Your Life?</h2>
         <p className="max-w-screen-sm text-neutral-300">
-          Join thousands of users who are already discovering their true potential through emotional intelligence.
+          Join the millions of people who are already documenting their life. Do it smart!
         </p>
       </div>
       <div className="mt-8 flex flex-col sm:flex-row gap-4">

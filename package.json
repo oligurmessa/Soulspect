@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "verify-firebase": "node scripts/verify-firebase-admin.js"
+    "verify-firebase": "node scripts/verify-firebase-admin.js",
+    "populate-sample-data": "node scripts/populate-sample-data.js"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.13",

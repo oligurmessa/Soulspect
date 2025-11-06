@@ -61,7 +61,7 @@ export const AnimatedLandingContent = () => {
       <motion.div variants={itemVariants}>
         <div className="flex items-center gap-0 mb-1">
           <Image
-            src="/logo.png"
+            src="/clean_logo.png"
             alt="Soulspect Logo"
             width={148}
             height={148}  
