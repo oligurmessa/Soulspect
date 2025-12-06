@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { AnimatePresence, motion, useAnimation } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import {
   TypeOutline,
@@ -9,26 +9,33 @@ import {
   FileText,
   Paperclip,
   AudioLines,
-  ChevronRight,
   Video,
   BadgePlus,
   Wand,
   Lock,
   Unlock,
+  ChevronsUp,
+  ChevronsDown,
+  Camera,
   type LucideIcon,
 } from "lucide-react"
+import { GeminiSparkle } from "@/components/ui/icons/gemini-sparkle"
+import { CameraModal } from "@/components/CameraModal"
 import { EmotionAnchor } from "@/components/emotion_anchor"
 import AudioDrawer from "@/components/drawers/audio_drawer"
 import AudioConfirmationBanner from "@/components/ui/audio-confirmation-banner"
 import { ItemCarouselRef } from "@/components/ItemCarousel"
 import { toast } from "@/components/ui/use-toast"
-import { useSidebar } from "@/components/ui/sidebar"
-// import { journalPrompts, getRandomPrompt, getCategories, type JournalPrompt } from "@/data/prompts"
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface ActionbarItem {
   id: string
   title: string
   icon: LucideIcon
+  ariaLabel?: string
 }
 
 interface ActionbarProps {
@@ -39,223 +46,172 @@ interface ActionbarProps {
   onImageAttach?: (files: FileList) => void
   onPromptSelect?: (prompt: string) => void
   onAudioRecorded?: (audioBlob: Blob, transcript?: string) => void
-  onEmotionLogged?: (emotion: string, intensity: number, note?: string, emotions?: string[], triggers?: string[]) => void
+  onEmotionLogged?: (
+    emotion: string,
+    intensity: number,
+    note?: string,
+    emotions?: string[],
+    triggers?: string[]
+  ) => void
   itemCarouselRef?: React.RefObject<ItemCarouselRef | null>
   isEditing?: boolean
+  alwaysShowAllButtons?: boolean
+  onPromptClick?: () => void
+  isReflectionsCollapsed?: boolean
+  onToggleReflectionsCollapse?: () => void
+  hasReflections?: boolean
 }
 
-const SELECTABLE_MODES = ["Type", "Video"]
+// ============================================================================
+// Constants
+// ============================================================================
 
-const transition = {
-  type: "spring" as const,
-  bounce: 0,
-  duration: 0.4,
+const MODES: ActionbarItem[] = [
+  { id: "Type", title: "Write", icon: FileText, ariaLabel: "Text mode" },
+  { id: "Video", title: "Video", icon: Video, ariaLabel: "Video mode" },
+]
+
+const ACTIONS: ActionbarItem[] = [
+  { id: "audio", title: "Audio", icon: AudioLines, ariaLabel: "Record audio" },
+  { id: "emotions", title: "Emotions", icon: BadgePlus, ariaLabel: "Log emotions" },
+  { id: "camera", title: "Camera", icon: Camera, ariaLabel: "Take photo" },
+  { id: "attach", title: "Attach", icon: Paperclip, ariaLabel: "Attach images" },
+  { id: "connections", title: "Connections", icon: SlidersHorizontal, ariaLabel: "View connections" },
+]
+
+const ANIMATION = {
+  spring: { type: "spring" as const, bounce: 0.2, duration: 0.5 },
+  smooth: { duration: 0.2, ease: "easeInOut" as const },
 }
+
+// ============================================================================
+// Component
+// ============================================================================
 
 export function Actionbar({
   className,
   selectedMode,
   onModeChange,
+  alwaysShowAllButtons = false,
   onToolbarClick,
   onImageAttach,
-  onPromptSelect,
   onAudioRecorded,
   onEmotionLogged,
   itemCarouselRef,
-  isEditing = false,
+  onPromptClick,
+  isReflectionsCollapsed = false,
+  onToggleReflectionsCollapse,
+  hasReflections = false,
 }: ActionbarProps) {
+  // ============================================================================
+  // State
+  // ============================================================================
+
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [isAudioDrawerOpen, setIsAudioDrawerOpen] = React.useState(false)
+  const [isCameraOpen, setIsCameraOpen] = React.useState(false)
   const [showAudioConfirmation, setShowAudioConfirmation] = React.useState(false)
-  const [isPromptDropdownOpen, setIsPromptDropdownOpen] = React.useState(false)
-  const [isLocked, setIsLocked] = React.useState(false)
-  const { state } = useSidebar()
-  const isCollapsed = state === "collapsed"
   const fileInputRef = React.useRef<HTMLInputElement>(null)
-  const promptDropdownRef = React.useRef<HTMLDivElement>(null)
-  const promptHoldTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-  const promptAnimationControls = useAnimation()
 
-
-  const ActionbarItems: ActionbarItem[] = [
-    { id: "audio", title: "Audio", icon: AudioLines },
-    { id: "Type", title: "Type", icon: FileText },
-    { id: "Video", title: "Video", icon: Video },
-    { id: "emotions", title: "Emotions", icon: BadgePlus },
-    { id: "attach", title: "Attach", icon: Paperclip },
-    { id: "prompt", title: "Prompt", icon: ChevronRight },
-    { id: "connections", title: "Connections", icon: SlidersHorizontal },
-
-  ]
+  // ============================================================================
+  // Handlers
+  // ============================================================================
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
-    if (files && files.length > 0 && onImageAttach) {
-      // Validate that all files are images
-      const imageFiles = Array.from(files).filter(file => 
-        file.type.startsWith('image/')
-      )
-      
-      if (imageFiles.length === 0) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select only image files (PNG, JPG, GIF, etc.)",
-          variant: "destructive"
-        })
-        return
-      }
-      
-      if (imageFiles.length < files.length) {
-        toast({
-          title: "Some files skipped",
-          description: `${files.length - imageFiles.length} non-image files were skipped`,
-          variant: "default"
-        })
-      }
-      
-      // Create a new FileList with only image files
-      const dt = new DataTransfer()
-      imageFiles.forEach(file => dt.items.add(file))
-      onImageAttach(dt.files)
+    if (!files || files.length === 0) return
+
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/")
+    )
+
+    if (imageFiles.length === 0) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select only image files",
+        variant: "destructive",
+      })
+      return
     }
-    
-    // Reset input so the same file can be selected again
-    if (event.target) {
-      event.target.value = ''
+
+    if (imageFiles.length < files.length) {
+      toast({
+        title: "Some files skipped",
+        description: `${files.length - imageFiles.length} non-image files were skipped`,
+      })
     }
+
+    const dataTransfer = new DataTransfer()
+    imageFiles.forEach((file) => dataTransfer.items.add(file))
+
+    if (onImageAttach) {
+      onImageAttach(dataTransfer.files)
+    }
+
+    event.target.value = ""
   }
 
-  const handleAttachClick = () => {
-    fileInputRef.current?.click()
-  }
-
-
-  const handleRandomPrompt = () => {
-    // const randomPrompt = getRandomPrompt()
-    // handlePromptSelect(randomPrompt)
+  const handleCameraPhotoTaken = (file: File) => {
+    if (onImageAttach) {
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+      onImageAttach(dataTransfer.files)
+    }
   }
 
   const handleAudioClick = () => {
-    // Check if we already have 2 audio recordings
-    const currentAudioCount = itemCarouselRef?.current?.getAudioCount() || 0;
-    
-    if (currentAudioCount >= 2) {
-      // Show confirmation banner
-      setShowAudioConfirmation(true);
+    const audioCount = itemCarouselRef?.current?.getAudioCount() || 0
+
+    if (audioCount >= 2) {
+      setShowAudioConfirmation(true)
     } else {
-      // Open audio drawer directly
-      setIsAudioDrawerOpen(true);
+      setIsAudioDrawerOpen(true)
     }
   }
 
-  const handleAudioConfirmationAccept = () => {
-    setShowAudioConfirmation(false);
-    setIsAudioDrawerOpen(true);
-  }
-
-  const handleAudioConfirmationReject = () => {
-    setShowAudioConfirmation(false);
-  }
-
-  const handlePromptClick = () => {
-    // Quick click - set random prompt as title
-    // const randomPrompt = getRandomPrompt()
-    // if (onPromptSelect) {
-    //   onPromptSelect(randomPrompt.title)
-    // }
-  }
-
-  const handlePromptHold = () => {
-    // Hold - open dropdown
-    console.log('Hold completed - opening dropdown')
-    setIsPromptDropdownOpen(true)
-  }
-
-  const handlePromptHoldStart = () => {
-    console.log('Hold start')
-    promptAnimationControls.set({ width: "0%" })
-    promptAnimationControls.start({
-      width: "100%",
-      transition: {
-        duration: 1.5, // 1.5 seconds hold duration
-        ease: "linear",
-      },
-    })
-
-    promptHoldTimeoutRef.current = setTimeout(() => {
-      console.log('Hold timeout fired')
-      handlePromptHold()
-      promptAnimationControls.stop()
-      promptAnimationControls.start({ width: "0%", transition: { duration: 0.1 } })
-      promptHoldTimeoutRef.current = null
-    }, 1500)
-  }
-
-  const handlePromptHoldEnd = () => {
-    console.log('Hold end, timeout exists:', !!promptHoldTimeoutRef.current)
-    if (promptHoldTimeoutRef.current) {
-      // Hold was not completed - this is a click
-      clearTimeout(promptHoldTimeoutRef.current)
-      promptHoldTimeoutRef.current = null
-      console.log('Quick click detected')
-      handlePromptClick()
-    }
-    // Always reset animation
-    promptAnimationControls.stop()
-    promptAnimationControls.start({ width: "0%", transition: { duration: 0.1 } })
-  }
-
-  // Close dropdown when clicking outside (with delay to prevent immediate close on hold)
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (promptDropdownRef.current && 
-          !promptDropdownRef.current.contains(event.target as Node) && 
-          !(event.target as Element).closest('[data-prompt-button]')) {
-        setIsPromptDropdownOpen(false)
-      }
-    }
-
-    if (isPromptDropdownOpen) {
-      // Add small delay to prevent immediate close after hold
-      const timer = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside)
-      }, 100)
-      
-      return () => {
-        clearTimeout(timer)
-        document.removeEventListener('mousedown', handleClickOutside)
-      }
-    }
-  }, [isPromptDropdownOpen])
-
-  const handleItemClick = (itemId: string) => {
-    if (SELECTABLE_MODES.includes(itemId)) {
-      onModeChange(itemId)
-    }
-
-    // Handle attachment click
-    if (itemId === "attach") {
-      handleAttachClick()
-      return
-    }
-
-    // Prompt click is now handled by hold button - skip here
-    if (itemId === "prompt") {
-      return
+  const handleActionClick = (actionId: string) => {
+    switch (actionId) {
+      case "audio":
+        handleAudioClick()
+        break
+      case "emotions":
+        setIsDrawerOpen(true)
+        break
+      case "attach":
+        fileInputRef.current?.click()
+        break
+      case "connections":
+        // Handle connections
+        break
+      default:
+        break
     }
   }
 
+  const handleIntensifyClick = () => {
+    const carouselItems = itemCarouselRef?.current?.getAllItems()
+
+    if (!carouselItems?.emotions || carouselItems.emotions.length === 0) {
+      toast({
+        title: "No emotions logged",
+        description: "Please log an emotion first to use this feature",
+      })
+      setIsDrawerOpen(true)
+    } else {
+      toast({
+        title: "Intensify",
+        description: "Enhancing your content based on logged emotions",
+      })
+    }
+  }
+
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
-    <div 
-      className={cn(
-        "fixed bottom-4 z-50 transition-all duration-200",
-        isCollapsed 
-          ? "left-1/2 -translate-x-1/2" 
-          : "left-[calc(50%+8rem)] -translate-x-1/2"
-      )}
-    >
-      {/* Hidden file input for image attachments */}
+    <>
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -265,207 +221,215 @@ export function Actionbar({
         className="hidden"
         aria-label="Attach images"
       />
-      
-      <div
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={ANIMATION.smooth}
         className={cn(
-          "flex items-center gap-2 px-2 py-2 rounded-xl shadow-sm bg-background/90 backdrop-blur-md border border-border",
-          className,
+          "flex items-center gap-1.5 sm:gap-2",
+          "px-2 py-1.5 sm:px-3 sm:py-2",
+          "rounded-xl sm:rounded-2xl",
+          "bg-white/80 dark:bg-neutral-900/80",
+          "backdrop-blur-xl",
+          "border border-neutral-200/50 dark:border-neutral-800/50",
+          "shadow-lg shadow-neutral-900/5 dark:shadow-black/20",
+          "transition-all duration-300",
+          "hover:shadow-xl hover:shadow-neutral-900/10 dark:hover:shadow-black/30",
+          className
         )}
       >
-        {/* Selectable Modes */}
-        <div className="flex items-center gap-1 px-1 py-1 rounded-lg bg-muted">
-          {ActionbarItems.filter(i => SELECTABLE_MODES.includes(i.id)).map((item) => {
-            const isSelected = selectedMode === item.id
+        {/* Mode Selection */}
+        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-neutral-100/80 dark:bg-neutral-800/50">
+          {MODES.map((mode) => {
+            const isSelected = selectedMode === mode.id
+            const Icon = mode.icon
 
             return (
               <motion.button
-                key={item.id}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={transition}
-                onClick={() => handleItemClick(item.id)}
+                key={mode.id}
+                onClick={() => onModeChange(mode.id)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={ANIMATION.spring}
+                aria-label={mode.ariaLabel}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200",
+                  "relative flex items-center gap-1.5 sm:gap-2",
+                  "px-2.5 py-1.5 sm:px-3 sm:py-2",
+                  "rounded-md sm:rounded-lg",
+                  "text-xs sm:text-sm font-medium",
+                  "transition-all duration-200",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600",
                   isSelected
-                    ? "bg-primary text-primary-foreground shadow"
-                    : "text-muted-foreground hover:bg-secondary/70 dark:hover:bg-secondary/70",
+                    ? [
+                      "bg-white dark:bg-neutral-700",
+                      "text-neutral-900 dark:text-white",
+                      "shadow-sm",
+                    ]
+                    : [
+                      "text-neutral-600 dark:text-neutral-400",
+                      "hover:text-neutral-900 dark:hover:text-neutral-200",
+                    ]
                 )}
               >
-                <item.icon size={16} />
-                <span>{item.title}</span>
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+                <span className="hidden xs:inline">{mode.title}</span>
               </motion.button>
             )
           })}
         </div>
 
-        {/* Other Actions */}
-        <div className="flex items-center gap-1 relative">
-          {ActionbarItems.filter(i => !SELECTABLE_MODES.includes(i.id)).map((item) => {
-            // Special handling for prompt button with hold functionality
-            if (item.id === "prompt") {
-              return (
-                <motion.button
-                  key={item.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onMouseDown={handlePromptHoldStart}
-                  onMouseUp={handlePromptHoldEnd}
-                  onMouseLeave={handlePromptHoldEnd}
-                  onTouchStart={handlePromptHoldStart}
-                  onTouchEnd={handlePromptHoldEnd}
-                  onTouchCancel={handlePromptHoldEnd}
-                  data-prompt-button
-                  className={cn(
-                    "relative overflow-hidden touch-none p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors",
-                    isPromptDropdownOpen && "bg-secondary/70"
-                  )}
-                >
-                  <motion.div
-                    initial={{ width: "0%" }}
-                    animate={promptAnimationControls}
-                    className="absolute left-0 top-0 h-full bg-primary/20"
-                  />
-                  <span className="relative z-10">
-                    <item.icon size={18} />
-                  </span>
-                </motion.button>
-              )
-            }
+        {/* Separator */}
+        <div className="w-px h-5 sm:h-6 bg-neutral-200 dark:bg-neutral-800" />
 
-            // Regular buttons for other actions
-            const onClick =
-              item.id === "emotions"
-                ? () => setIsDrawerOpen(true)
-                : item.id === "audio"
-                ? handleAudioClick
-                : () => handleItemClick(item.id)
+        {/* Action Buttons */}
+        <div className="flex items-center gap-0.5 sm:gap-1">
+          {ACTIONS.map((action) => {
+            const Icon = action.icon
 
             return (
-              <motion.button
-                key={item.id}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={onClick}
-                className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
-              >
-                <item.icon size={18} />
-              </motion.button>
+              <Tooltip key={action.id} content={action.title}>
+                <motion.button
+                  onClick={() => handleActionClick(action.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={ANIMATION.spring}
+                  aria-label={action.ariaLabel}
+                  className={cn(
+                    "p-1.5 sm:p-2",
+                    "rounded-md sm:rounded-lg",
+                    "text-neutral-600 dark:text-neutral-400",
+                    "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+                    "hover:text-neutral-900 dark:hover:text-white",
+                    "transition-all duration-200",
+                    "outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
+                  )}
+                >
+                  <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
+                </motion.button>
+              </Tooltip>
             )
           })}
 
-          {/* Prompt Dropdown */}
-          <AnimatePresence>
-            {isPromptDropdownOpen && (
-              <motion.div
-                ref={promptDropdownRef}
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="absolute bottom-full mb-2 right-0 w-80 bg-background/95 backdrop-blur-md border border-border rounded-lg shadow-lg z-50"
+          {/* AI Reflection Button */}
+          {onPromptClick && (
+            <Tooltip content="AI Reflection">
+              <motion.button
+                onClick={onPromptClick}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={ANIMATION.spring}
+                aria-label="Add AI reflection"
+                className={cn(
+                  "p-1.5 sm:p-2",
+                  "rounded-md sm:rounded-lg",
+                  "text-[#ff9066] dark:text-[#ff9066]",
+                  "hover:bg-[#ff9066]/10 dark:hover:bg-[#ff9066]/10",
+                  "hover:text-[#ff9066] dark:hover:text-[#ff9066]",
+                  "transition-all duration-200",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-[#ff9066]"
+                )}
               >
-                <div className="p-3">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium">Journal Prompts</h3>
-                    <button
-                      onClick={handleRandomPrompt}
-                      className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 transition-colors"
-                    >
-                      Random
-                    </button>
-                  </div>
-                  
-                  <div className="max-h-60 overflow-y-auto space-y-1">
-                    <div className="text-center text-muted-foreground text-sm p-4">
-                      Prompts temporarily unavailable
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <GeminiSparkle className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
+              </motion.button>
+            </Tooltip>
+          )}
+
+          {/* Toolbar Button - Desktop only */}
+          {(alwaysShowAllButtons || selectedMode === "Type") && onToolbarClick && (
+            <Tooltip content="Formatting">
+              <motion.button
+                onClick={onToolbarClick}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={ANIMATION.spring}
+                aria-label="Toggle formatting toolbar"
+                className={cn(
+                  "hidden sm:flex p-2 rounded-lg",
+                  "text-neutral-600 dark:text-neutral-400",
+                  "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+                  "hover:text-neutral-900 dark:hover:text-white",
+                  "transition-all duration-200",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
+                )}
+              >
+                <TypeOutline className="w-[18px] h-[18px]" strokeWidth={2} />
+              </motion.button>
+            </Tooltip>
+          )}
+
+          {/* Intensify Button - Tablet+ */}
+          <Tooltip content="Intensify">
+            <motion.button
+              onClick={handleIntensifyClick}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={ANIMATION.spring}
+              aria-label="Intensify content"
+              className={cn(
+                "hidden xs:flex p-1.5 sm:p-2",
+                "rounded-md sm:rounded-lg",
+                "text-amber-600 dark:text-amber-400",
+                "hover:bg-amber-50 dark:hover:bg-amber-950/50",
+                "hover:text-amber-700 dark:hover:text-amber-300",
+                "transition-all duration-200",
+                "outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              )}
+            >
+              <Wand className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
+            </motion.button>
+          </Tooltip>
         </div>
 
-
-        {/* Toolbar Button (only for Type mode) */}
-        {selectedMode === "Type" && (
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => onToolbarClick && onToolbarClick()}
-            className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
-            title="Toggle Toolbar"
-          >
-            <TypeOutline size={18} />
-          </motion.button>
+        {/* Separator */}
+        {onToggleReflectionsCollapse && (
+          <div className="w-px h-5 sm:h-6 bg-neutral-200 dark:bg-neutral-800" />
         )}
 
-        {/* Intensify Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => {
-            // Check if emotions are logged
-            const carouselItems = itemCarouselRef?.current?.getAllItems()
-            if (!carouselItems?.emotions || carouselItems.emotions.length === 0) {
-              toast({
-                title: "No emotions logged",
-                description: "Please log an emotion first to use the intensify feature",
-                variant: "default"
-              })
-              setIsDrawerOpen(true) // Open emotion drawer
-            } else {
-              // TODO: Implement intensify functionality
-              toast({
-                title: "Intensify",
-                description: "This feature will enhance your content based on logged emotions",
-              })
+        {/* Collapse/Expand Toggle */}
+        {onToggleReflectionsCollapse && (
+          <motion.button
+            onClick={hasReflections ? onToggleReflectionsCollapse : undefined}
+            disabled={!hasReflections}
+            whileHover={hasReflections ? { scale: 1.02 } : {}}
+            whileTap={hasReflections ? { scale: 0.98 } : {}}
+            transition={ANIMATION.spring}
+            aria-label={
+              isReflectionsCollapsed ? "Expand all reflections" : "Collapse all reflections"
             }
-          }}
-          className="p-2 rounded-md text-muted-foreground hover:bg-secondary/70 transition-colors"
-          title="Intensify"
-        >
-          <Wand size={22} />
-        </motion.button>
+            className={cn(
+              "flex items-center gap-1.5 sm:gap-2",
+              "px-2.5 py-1.5 sm:px-3 sm:py-2",
+              "rounded-lg sm:rounded-xl",
+              "text-xs sm:text-sm font-medium",
+              "transition-all duration-200",
+              "outline-none focus-visible:ring-2",
+              !hasReflections
+                ? "opacity-40 cursor-not-allowed bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600"
+                : isReflectionsCollapsed
+                  ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                  : "bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+            )}
+          >
+            {isReflectionsCollapsed ? (
+              <ChevronsDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+            ) : (
+              <ChevronsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+            )}
+            <span className="hidden sm:inline">
+              {isReflectionsCollapsed ? "Expand" : "Collapse"}
+            </span>
+          </motion.button>
+        )}
+      </motion.div>
 
-        {/* Lock/Unlock Button */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setIsLocked(!isLocked)}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2",
-            "rounded-xl border shadow-sm transition-all duration-200",
-            "hover:shadow-md active:border-primary/50",
-            isLocked
-              ? [
-                  "bg-primary text-white",
-                  "border-primary/30",
-                  "hover:bg-primary/90",
-                  "hover:border-primary/40",
-                ]
-              : [
-                  "bg-background text-muted-foreground",
-                  "border-border/30",
-                  "hover:bg-muted",
-                  "hover:text-foreground",
-                  "hover:border-border/40",
-                ]
-          )}
-        >
-          {isLocked ? (
-            <Lock className="w-3.5 h-3.5" />
-          ) : (
-            <Unlock className="w-3.5 h-3.5" />
-          )}
-          <span className="text-sm font-medium">
-            {isLocked ? "Locked" : "Unlocked"}
-          </span>
-        </motion.button>
-      </div>
-      
-      <EmotionAnchor open={isDrawerOpen} onOpenChange={setIsDrawerOpen} onEmotionLogged={onEmotionLogged} />
-      
+      {/* Drawers & Modals */}
+      <EmotionAnchor
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        onEmotionLogged={onEmotionLogged}
+      />
+
       <AudioDrawer
         open={isAudioDrawerOpen}
         onOpenChange={setIsAudioDrawerOpen}
@@ -473,14 +437,72 @@ export function Actionbar({
         onAudioRecorded={onAudioRecorded}
       />
 
-      {/* Audio Confirmation Banner */}
+      <CameraModal
+        isOpen={isCameraOpen}
+        onClose={() => setIsCameraOpen(false)}
+        onPhotoTaken={handleCameraPhotoTaken}
+      />
+
       {showAudioConfirmation && (
         <AudioConfirmationBanner
-          onAccept={handleAudioConfirmationAccept}
-          onReject={handleAudioConfirmationReject}
+          onAccept={() => {
+            setShowAudioConfirmation(false)
+            setIsAudioDrawerOpen(true)
+          }}
+          onReject={() => setShowAudioConfirmation(false)}
         />
       )}
+    </>
+  )
+}
 
+// ============================================================================
+// Tooltip Component
+// ============================================================================
+
+interface TooltipProps {
+  content: string
+  children: React.ReactElement
+}
+
+function Tooltip({ content, children }: TooltipProps) {
+  const [isVisible, setIsVisible] = React.useState(false)
+
+  return (
+    <div
+      className="relative inline-flex"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              "absolute bottom-full left-1/2 -translate-x-1/2 mb-2",
+              "px-2 py-1 rounded-md",
+              "bg-neutral-900 dark:bg-neutral-100",
+              "text-white dark:text-neutral-900",
+              "text-xs font-medium whitespace-nowrap",
+              "pointer-events-none z-50",
+              "shadow-lg"
+            )}
+          >
+            {content}
+            <div
+              className={cn(
+                "absolute top-full left-1/2 -translate-x-1/2 -mt-px",
+                "w-2 h-2 rotate-45",
+                "bg-neutral-900 dark:bg-neutral-100"
+              )}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

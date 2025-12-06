@@ -1,138 +1,92 @@
 "use client";
- 
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Search, X, Loader2 } from "lucide-react";
- 
+import { Search, Command } from "lucide-react";
+
 interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    onClear?: () => void;
-    showSearchIcon?: boolean;
-    isLoading?: boolean;
-    suggestions?: string[];
-    onSuggestionClick?: (suggestion: string) => void;
+    shortcut?: string;
 }
- 
+
+/**
+ * SearchInput component with Cmd+K / Ctrl+K shortcut to focus.
+ */
 const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
-    ({ 
-        className, 
-        onClear, 
-        showSearchIcon = true, 
-        isLoading = false,
-        suggestions = [],
-        onSuggestionClick,
-        ...props 
-    }, ref) => {
-        const [hasValue, setHasValue] = React.useState(false);
-        const [isFocused, setIsFocused] = React.useState(false);
- 
-        const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            setHasValue(e.target.value !== "");
-            props.onChange?.(e);
-        };
- 
-        const handleClear = () => {
-            if (onClear) {
-                onClear();
-            }
-            setHasValue(false);
-        };
- 
+    ({ className, shortcut = "⌘K", ...props }, ref) => {
+        const inputRef = React.useRef<HTMLInputElement>(null);
+
+        React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+
+        React.useEffect(() => {
+            const handler = (e: KeyboardEvent) => {
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+                    e.preventDefault();
+                    inputRef.current?.focus();
+                }
+            };
+            window.addEventListener("keydown", handler);
+            return () => window.removeEventListener("keydown", handler);
+        }, []);
+
         return (
-            <div className="relative w-full">
-                <div className="relative">
-                    {showSearchIcon && (
-                        <Search className={cn(
-                            "absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4",
-                            "text-zinc-500 transition-colors duration-200",
-                            isFocused && "text-zinc-900 dark:text-zinc-100"
-                        )} />
+            <div className="relative group">
+                <div
+                    className={cn(
+                        "relative",
+                        "bg-zinc-100 dark:bg-zinc-800",
+                        "border border-zinc-200 dark:border-transparent",
+                        "rounded-xl",
+                        "transition-colors",
+                        "duration-200",
+                        "hover:border-zinc-300 dark:hover:border-zinc-700",
+                        className
                     )}
-                    
-                    <input
-                        ref={ref}
-                        {...props}
-                        onChange={handleChange}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={() => setIsFocused(false)}
-                        className={cn(
-                            // Base styles
-                            "w-full h-11",
-                            "bg-zinc-100 dark:bg-zinc-800",
-                            "border border-zinc-200 dark:border-transparent",
-                            "text-sm text-zinc-900 dark:text-zinc-100",
-                            "rounded-xl",
-                            
-                            // Padding
-                            showSearchIcon ? "pl-10" : "pl-4",
-                            hasValue ? "pr-16" : "pr-4",
-                            
-                            // Placeholder
-                            "placeholder:text-zinc-500",
-                            
-                            // Focus and hover
-                            "focus:outline-hidden",
-                            "hover:border-zinc-300 dark:hover:border-zinc-700",
-                            
-                            // Transitions
-                            "transition-colors",
-                            "duration-200",
-                            
-                            className
-                        )}
-                    />
- 
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                        {isLoading && (
-                            <Loader2 className="w-4 h-4 text-zinc-500 animate-spin" />
-                        )}
-                        
-                        {hasValue && (
-                            <button
-                                onClick={handleClear}
+                >
+                    <div className="relative flex items-center">
+                        <div
+                            className={cn(
+                                "absolute left-0 inset-y-0 w-11",
+                                "flex items-center justify-center",
+                                "border-r border-zinc-200 dark:border-zinc-700"
+                            )}
+                        >
+                            <Search className="w-4 h-4 text-zinc-500" />
+                        </div>
+
+                        <input
+                            ref={inputRef}
+                            {...props}
+                            className={cn(
+                                "w-full h-11",
+                                "pl-14 pr-16",
+                                "bg-transparent",
+                                "text-sm text-zinc-900 dark:text-zinc-100",
+                                "placeholder:text-zinc-500",
+                                "focus:outline-none"
+                            )}
+                        />
+
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            <kbd
                                 className={cn(
-                                    "p-1.5 rounded-full",
-                                    "text-zinc-500",
-                                    "hover:bg-zinc-200 dark:hover:bg-zinc-700",
-                                    "transition-colors"
+                                    "hidden sm:inline-flex h-5 px-1.5 gap-0.5",
+                                    "items-center text-[10px] font-medium",
+                                    "bg-zinc-200 dark:bg-zinc-700",
+                                    "text-zinc-500 dark:text-zinc-400",
+                                    "rounded-sm border border-zinc-300 dark:border-zinc-600"
                                 )}
                             >
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
+                                <Command className="w-2.5 h-2.5" />
+                                <span>K</span>
+                            </kbd>
+                        </div>
                     </div>
                 </div>
- 
-                {/* Suggestions dropdown */}
-                {isFocused && suggestions.length > 0 && (
-                    <div className={cn(
-                        "absolute w-full mt-2",
-                        "bg-zinc-100 dark:bg-zinc-800",
-                        "border border-zinc-200 dark:border-zinc-700",
-                        "rounded-xl",
-                        "divide-y divide-zinc-200 dark:divide-zinc-700",
-                        "overflow-hidden"
-                    )}>
-                        {suggestions.map((suggestion, index) => (
-                            <button
-                                key={index}
-                                onClick={() => onSuggestionClick?.(suggestion)}
-                                className={cn(
-                                    "w-full px-4 py-2.5 text-left",
-                                    "text-sm text-zinc-900 dark:text-zinc-100",
-                                    "hover:bg-zinc-200 dark:hover:bg-zinc-700",
-                                    "transition-colors"
-                                )}
-                            >
-                                {suggestion}
-                            </button>
-                        ))}
-                    </div>
-                )}
             </div>
         );
     }
 );
- 
+
 SearchInput.displayName = "SearchInput";
- 
+
 export { SearchInput };

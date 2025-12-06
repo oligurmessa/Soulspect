@@ -32,7 +32,7 @@ export function FeaturesSectionWithHoverEffects() {
   },
   {
   title: "Security of Your Personal Data",
-  description: "End-to-end encryption, strict access controls, and integrity safeguards—your data remains yours.",
+  description: "All AI processing runs through a private, access-controlled endpoint inside our cloud environment. Your data is isolated, encrypted, and never shared or used to train third-party models.",
   icon: <Lock className="w-8 h-8" />,
   },
   {

@@ -5,138 +5,9 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "./firebase";
+import { User, EmotionLog, JournalEntry, UserValues, SoulspaceItem, AnalyticsData } from "./types";
 
-/* ---------- TYPES ---------- */
-export interface User {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  preferences: {
-    timezone?: string;
-    notifications?: boolean;
-    theme?: 'light' | 'dark' | 'system';
-    language?: string;
-    startWeekOn?: boolean;
-    autoTimezone?: boolean;
-    emailNotifications?: boolean;
-    soundEnabled?: boolean;
-    volume?: number;
-    fontSize?: string;
-    reducedMotion?: boolean;
-    highContrast?: boolean;
-    twoFactor?: boolean;
-    dataCollection?: boolean;
-    autoBackup?: boolean;
-    timeFormat24?: boolean;
-    compactMode?: boolean;
-    autoSave?: boolean;
-    spellCheck?: boolean;
-    appPassword?: string;
-    lockFeatureEnabled?: boolean;
-  };
-}
-
-export interface EmotionLog {
-  id?: string;
-  userId: string;
-  mood: number;            // 0-6 (matching EmotionVisualizer scale)
-  emotions: string[];      // Selected emotions from EmotionSelector
-  triggers?: string[];     // Triggers like "Work", "Family", etc.
-  context?: string;        // Additional context/notes
-  intensity?: number;      // 1-10 intensity scale
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface JournalEntry {
-  id?: string;
-  userId: string;
-  title: string;
-  content: string;
-  entryType: 'text' | 'voice' | 'video';  // Based on the three tabs
-  prompt?: string;
-  mood?: number;
-  emotions?: string[];
-  attachments?: string[];  // File URLs
-  isDraft: boolean;
-  date: Timestamp;         // Entry date (can be different from created)
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  carouselContent?: {
-    photos: {
-      id: string | number;
-      name: string;
-      caption: string;
-      url: string;
-      createdAt: string;
-    }[];
-    emotions: {
-      id: string | number;
-      emotion: string;
-      intensity: number;
-      note: string;
-      emotions: string[];
-      triggers: string[];
-      createdAt: string;
-    }[];
-    audioRecordings: {
-      id: string | number;
-      transcript: string;
-      duration: number;
-      createdAt: string;
-      audioUrl?: string;
-    }[];
-  };
-}
-
-export interface UserValues {
-  id?: string;
-  userId: string;
-  values: {
-    name: string;
-    description?: string;
-    importance: number;     // 1-10
-    alignment: number;      // 1-10 how well they're living it
-  }[];
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-
-export interface SoulspaceItem {
-  id?: string;
-  userId: string;
-  type: 'note' | 'image' | 'audio' | 'video' | 'link';
-  title: string;
-  content: string;
-  url?: string;           // For attachments
-  tags?: string[];
-  isPrivate: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface AnalyticsData {
-  id?: string;
-  userId: string;
-  period: 'daily' | 'weekly' | 'monthly';
-  date: Timestamp;
-  emotionStats: {
-    averageMood: number;
-    emotionCounts: Record<string, number>;
-    triggerCounts: Record<string, number>;
-  };
-  journalStats: {
-    entriesCount: number;
-    wordsWritten: number;
-    voiceMinutes: number;
-    videoMinutes: number;
-  };
-  createdAt: Timestamp;
-}
+export * from "./types";
 
 /* ---------- USER CRUD ---------- */
 export const createUser = async (userData: Omit<User, 'createdAt' | 'updatedAt'>) => {
@@ -325,7 +196,7 @@ export const deleteSoulspaceItem = async (uid: string, itemId: string) => {
 export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' | 'monthly') => {
   const now = new Date();
   let startDate: Date;
-  
+
   switch (period) {
     case 'daily':
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -337,10 +208,10 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       break;
   }
-  
+
   // Get emotion logs for the period
   const emotionLogs = await getEmotionLogsByDateRange(uid, startDate, now);
-  
+
   // Calculate emotion stats
   const emotionStats = {
     averageMood: emotionLogs.reduce((sum, log) => sum + log.mood, 0) / emotionLogs.length || 0,
@@ -357,7 +228,7 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
       return counts;
     }, {} as Record<string, number>),
   };
-  
+
   // Get journal entries for the period
   const journalQuery = query(
     collection(db, "users", uid, "journalEntries"),
@@ -366,14 +237,14 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
   );
   const journalSnapshot = await getDocs(journalQuery);
   const journalEntries = journalSnapshot.docs.map(doc => doc.data() as JournalEntry);
-  
+
   const journalStats = {
     entriesCount: journalEntries.length,
     wordsWritten: journalEntries.reduce((sum, entry) => sum + (entry.content?.split(' ').length || 0), 0),
     voiceMinutes: journalEntries.filter(e => e.entryType === 'voice').length * 5, // Estimate
     videoMinutes: journalEntries.filter(e => e.entryType === 'video').length * 5, // Estimate
   };
-  
+
   // Save analytics data
   const analyticsData: Omit<AnalyticsData, 'id' | 'createdAt'> = {
     userId: uid,
@@ -382,13 +253,13 @@ export const generateAnalytics = async (uid: string, period: 'daily' | 'weekly' 
     emotionStats,
     journalStats,
   };
-  
+
   const analyticsRef = doc(db, "users", uid, "analytics", `${period}-${now.toISOString().split('T')[0]}`);
   await setDoc(analyticsRef, {
     ...analyticsData,
     createdAt: serverTimestamp(),
   });
-  
+
   return analyticsData;
 };
 
@@ -460,7 +331,7 @@ export const exportUserData = async (uid: string, format: 'json' | 'csv' = 'json
         const context = (log.context || '').replace(/,/g, ';').replace(/\n/g, ' ');
         return `${date},${log.mood},"${emotions}","${triggers}","${context}",${log.intensity || ''}`;
       }).join('\n');
-      
+
       return csvHeader + csvRows;
     }
   } catch (error) {
@@ -473,7 +344,7 @@ export const downloadExportData = (data: string, filename: string, format: 'json
   const mimeType = format === 'json' ? 'application/json' : 'text/csv';
   const blob = new Blob([data], { type: mimeType });
   const url = URL.createObjectURL(blob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -483,17 +354,18 @@ export const downloadExportData = (data: string, filename: string, format: 'json
   URL.revokeObjectURL(url);
 };
 
+
 /* ---------- FILE UPLOAD HELPERS ---------- */
 export const uploadJournalFile = async (uid: string, file: Blob, entryId: string, fileType: 'voice' | 'video' | string): Promise<string> => {
   try {
     const timestamp = Date.now();
     const fileExtension = fileType === 'voice' ? 'webm' : 'webm';
     const filePath = `users/${uid}/journals/${entryId}/${fileType}_${timestamp}.${fileExtension}`;
-    
+
     const storageRef = ref(storage, filePath);
     const uploadResult = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(uploadResult.ref);
-    
+
     return downloadURL;
   } catch (error) {
     console.error('Error uploading file:', error);
@@ -506,15 +378,15 @@ export const uploadJournalImage = async (uid: string, imageDataUrl: string, entr
     // Convert data URL to blob
     const response = await fetch(imageDataUrl);
     const blob = await response.blob();
-    
+
     const timestamp = Date.now();
     const fileExtension = imageName.split('.').pop() || 'jpg';
     const filePath = `users/${uid}/journals/${entryId}/image_${timestamp}.${fileExtension}`;
-    
+
     const storageRef = ref(storage, filePath);
     const uploadResult = await uploadBytes(storageRef, blob);
     const downloadURL = await getDownloadURL(uploadResult.ref);
-    
+
     return downloadURL;
   } catch (error) {
     console.error('Error uploading image:', error);
@@ -525,19 +397,19 @@ export const uploadJournalImage = async (uid: string, imageDataUrl: string, entr
 export const uploadImageFile = async (uid: string, file: File, entryId: string): Promise<string> => {
   try {
     console.log('uploadImageFile called with:', { uid, fileName: file.name, fileSize: file.size, entryId });
-    
+
     // Use the same pattern as uploadJournalFile which works for voice uploads
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const filePath = `users/${uid}/journals/${entryId}/image_${timestamp}.${fileExtension}`;
     console.log('Storage path:', filePath);
-    
+
     const storageRef = ref(storage, filePath);
     console.log('Uploading to Firebase Storage...');
     const uploadResult = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(uploadResult.ref);
     console.log('Download URL obtained:', downloadURL);
-    
+
     return downloadURL;
   } catch (error: any) {
     console.error('Error uploading image file:', error);
@@ -562,7 +434,7 @@ export const deleteJournalFile = async (fileUrl: string): Promise<void> => {
 
 /* ---------- ENHANCED JOURNAL ENTRY CRUD WITH FILE SUPPORT ---------- */
 export const saveJournalEntryWithFiles = async (
-  uid: string, 
+  uid: string,
   entryData: Omit<JournalEntry, 'id' | 'userId' | 'createdAt' | 'updatedAt'>,
   files?: { voiceBlob?: Blob; videoBlob?: Blob; audioBlobs?: { id: string | number; blob: Blob }[] }
 ): Promise<string> => {
@@ -570,26 +442,26 @@ export const saveJournalEntryWithFiles = async (
     // First create the journal entry to get an ID
     const docRef = await addJournalEntry(uid, entryData);
     const entryId = docRef.id;
-    
+
     // Upload files if provided
     const attachmentUrls: string[] = [];
-    
+
     if (files?.voiceBlob) {
       const voiceUrl = await uploadJournalFile(uid, files.voiceBlob, entryId, 'voice');
       attachmentUrls.push(voiceUrl);
     }
-    
+
     if (files?.videoBlob) {
       const videoUrl = await uploadJournalFile(uid, files.videoBlob, entryId, 'video');
       attachmentUrls.push(videoUrl);
     }
-    
+
     // Upload audio recordings from carousel
     if (files?.audioBlobs && files.audioBlobs.length > 0) {
       for (const audioFile of files.audioBlobs) {
         const audioUrl = await uploadJournalFile(uid, audioFile.blob, entryId, `audio_${audioFile.id}`);
         attachmentUrls.push(audioUrl);
-        
+
         // Update the carousel content with the uploaded URL
         if (entryData.carouselContent?.audioRecordings) {
           const audioIndex = entryData.carouselContent.audioRecordings.findIndex(
@@ -601,7 +473,7 @@ export const saveJournalEntryWithFiles = async (
         }
       }
     }
-    
+
     // Update the entry with attachment URLs and carousel content if any files were uploaded
     const updateData: any = {};
     if (attachmentUrls.length > 0) {
@@ -610,11 +482,11 @@ export const saveJournalEntryWithFiles = async (
     if (entryData.carouselContent) {
       updateData.carouselContent = entryData.carouselContent;
     }
-    
+
     if (Object.keys(updateData).length > 0) {
       await updateJournalEntry(uid, entryId, updateData);
     }
-    
+
     return entryId;
   } catch (error) {
     console.error('Error saving journal entry with files:', error);
@@ -648,7 +520,7 @@ export const createDraftEntry = async (userId: string, initialData: Partial<Jour
       },
       ...initialData
     });
-    
+
     console.log('Legacy draft entry created:', docRef.id);
     return docRef.id;
   } catch (error) {
@@ -666,7 +538,7 @@ export const autosaveEntry = async (userId: string, entryId: string, updates: Pa
       ...updates,
       updatedAt: serverTimestamp()
     });
-    
+
     console.log('Legacy entry autosaved:', entryId);
   } catch (error) {
     console.error('Error autosaving legacy entry:', error);
@@ -683,7 +555,7 @@ export const finalizeDraft = async (userId: string, entryId: string) => {
       isDraft: false,
       updatedAt: serverTimestamp()
     });
-    
+
     console.log('Legacy draft finalized:', entryId);
   } catch (error) {
     console.error('Error finalizing legacy draft:', error);
@@ -697,12 +569,12 @@ export const loadEntryForEdit = async (userId: string, entryId: string): Promise
   try {
     const docRef = doc(db, 'users', userId, 'journalEntries', entryId);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       console.warn('Legacy entry not found:', entryId);
       return null;
     }
-    
+
     const data = docSnap.data();
     return {
       id: docSnap.id,

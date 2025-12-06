@@ -27,6 +27,16 @@ export interface AudioItem {
   createdAt: Date;
 }
 
+export interface VideoItem {
+  id: string | number;
+  type: 'video';
+  videoBlob?: Blob;
+  videoUrl: string;
+  duration: number;
+  createdAt: Date;
+  caption?: string;
+}
+
 export interface EmotionItem extends Item {
   type: 'emotion';
   emotion: string;
@@ -37,8 +47,8 @@ export interface EmotionItem extends Item {
   createdAt: Date;
 }
 
-export type CarouselItem = PhotoItem | EmotionItem;
-export type AllItems = PhotoItem | AudioItem | EmotionItem;
+export type CarouselItem = PhotoItem | EmotionItem | VideoItem;
+export type AllItems = PhotoItem | AudioItem | VideoItem | EmotionItem;
 
 interface ItemCarouselProps {
   className?: string;
@@ -50,6 +60,7 @@ interface ItemCarouselProps {
 const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className, onImageUpload, userId }, ref) => {
   const [items, setItems] = useState<CarouselItem[]>([]);
   const [audioItems, setAudioItems] = useState<AudioItem[]>([]);
+  const [videoItems, setVideoItems] = useState<VideoItem[]>([]);
   const [allItems, setAllItems] = useState<AllItems[]>([]);
   const [showEmotionDialog, setShowEmotionDialog] = useState(false);
   const [selectedEmotionItem, setSelectedEmotionItem] = useState<EmotionItem | null>(null);
@@ -82,6 +93,48 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
       
       return updatedItems;
     });
+  };
+
+  // Add a new video recording
+  const addVideoRecording = (videoBlob: Blob, duration: number, caption?: string) => {
+    const videoUrl = URL.createObjectURL(videoBlob);
+    const newVideoItem: VideoItem = {
+      id: Date.now() + Math.random(),
+      type: 'video',
+      videoBlob,
+      videoUrl,
+      duration,
+      caption: caption || '',
+      createdAt: new Date(),
+    };
+    
+    setVideoItems(prev => {
+      const updatedItems = [newVideoItem, ...prev];
+      
+      // Limit to 1 video recording max - remove oldest if we exceed the limit
+      if (updatedItems.length > 1) {
+        const itemToRemove = updatedItems[updatedItems.length - 1];
+        // Clean up the URL of the removed item
+        URL.revokeObjectURL(itemToRemove.videoUrl);
+        return updatedItems.slice(0, 1);
+      }
+      
+      return updatedItems;
+    });
+  };
+
+  // Add video recording from existing URL (for edit mode)
+  const addVideoFromUrl = (videoUrl: string, duration?: number, caption?: string, createdAt?: Date) => {
+    const newVideoItem: VideoItem = {
+      id: Date.now() + Math.random(),
+      type: 'video',
+      videoUrl,
+      duration: duration || 0,
+      caption: caption || '',
+      createdAt: createdAt || new Date(),
+    };
+    
+    setVideoItems(prev => [...prev, newVideoItem]);
   };
 
   // Add audio recording from existing URL (for edit mode)
@@ -229,8 +282,17 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
       event.stopPropagation();
     }
     
-    // Remove from carousel items
+    // Remove from carousel items (photos and emotions)
     setItems(prev => prev.filter(item => item.id !== id));
+    
+    // Remove from video items if it's a video
+    setVideoItems(prev => {
+      const itemToRemove = prev.find(item => item.id === id);
+      if (itemToRemove && itemToRemove.videoUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(itemToRemove.videoUrl);
+      }
+      return prev.filter(item => item.id !== id);
+    });
   };
 
   // Remove audio item
@@ -289,6 +351,26 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">
             <span className="text-gray-400 text-sm">Loading...</span>
+          </div>
+        );
+      case 'video':
+        return (
+          <div className="relative w-full h-full bg-black rounded-lg overflow-hidden">
+            <video
+              src={item.videoUrl}
+              className="w-full h-full object-cover"
+              controls={false}
+              muted
+              playsInline
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <span className="material-symbols-outlined text-gray-800 text-2xl ml-1">play_arrow</span>
+              </div>
+            </div>
+            <div className="absolute bottom-2 left-2 text-white text-xs bg-black/60 rounded px-2 py-1">
+              {Math.floor(item.duration / 60).toString().padStart(2, '0')}:{(item.duration % 60).toString().padStart(2, '0')}
+            </div>
           </div>
         );
       case 'emotion':
@@ -352,6 +434,60 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
             </div>
           </>
         );
+      case 'video':
+        return (
+          <>
+            <div className="relative">
+              <video
+                src={item.videoUrl}
+                className="w-full max-h-[80vh] object-contain"
+                controls
+                playsInline
+              />
+            </div>
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
+              <div className="mb-3">
+                <CaptionInput
+                  value={item.caption || ''}
+                  placeholder="Add a caption..."
+                  onSave={(caption) => {
+                    setVideoItems(prev => prev.map(videoItem => 
+                      videoItem.id === item.id
+                        ? { ...videoItem, caption }
+                        : videoItem
+                    ));
+                  }}
+                  onClear={() => {
+                    setVideoItems(prev => prev.map(videoItem => 
+                      videoItem.id === item.id
+                        ? { ...videoItem, caption: '' }
+                        : videoItem
+                    ));
+                  }}
+                />
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    // Remove from video items
+                    setVideoItems(prev => {
+                      const itemToRemove = prev.find(videoItem => videoItem.id === item.id);
+                      if (itemToRemove && itemToRemove.videoUrl.startsWith('blob:')) {
+                        URL.revokeObjectURL(itemToRemove.videoUrl);
+                      }
+                      return prev.filter(videoItem => videoItem.id !== item.id);
+                    });
+                    onRemove(item.id);
+                  }}
+                  className="px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Remove
+                </button>
+              </div>
+            </div>
+          </>
+        );
       case 'emotion':
         return null; // Emotion items use their own dialog
       default:
@@ -361,14 +497,14 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
 
   // Update combined chronological list when items change
   useEffect(() => {
-    const combined: AllItems[] = [...items, ...audioItems];
+    const combined: AllItems[] = [...items, ...audioItems, ...videoItems];
     combined.sort((a, b) => {
       const aTime = 'createdAt' in a ? a.createdAt.getTime() : 0;
       const bTime = 'createdAt' in b ? b.createdAt.getTime() : 0;
       return bTime - aTime; // Most recent first
     });
     setAllItems(combined);
-  }, [items, audioItems]);
+  }, [items, audioItems, videoItems]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -379,6 +515,12 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
           URL.revokeObjectURL(item.audioUrl);
         }
       });
+      // Clean up all video URLs (only blob URLs, not Firebase URLs)
+      videoItems.forEach(item => {
+        if (item.videoUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.videoUrl);
+        }
+      });
     };
   }, []);
 
@@ -386,11 +528,14 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
   useImperativeHandle(ref, () => ({
     addAudioRecording,
     addAudioFromUrl,
+    addVideoRecording,
+    addVideoFromUrl,
     addEmotion,
     addPhoto,
     addPhotoFromFile,
     addPhotoFromDataUrl,
     getAudioCount: () => audioItems.length,
+    getVideoCount: () => videoItems.length,
     getAllItems: () => ({
       photos: items.filter(item => item.type === 'photo').map(photo => ({
         ...photo,
@@ -399,6 +544,7 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
       })) as PhotoItem[],
       emotions: items.filter(item => item.type === 'emotion') as EmotionItem[],
       audioRecordings: audioItems,
+      videoRecordings: videoItems,
     }),
     clearAllItems: () => {
       // Clean up audio URLs (only blob URLs, not Firebase URLs)
@@ -407,10 +553,24 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
           URL.revokeObjectURL(item.audioUrl);
         }
       });
+      // Clean up video URLs (only blob URLs, not Firebase URLs)
+      videoItems.forEach(item => {
+        if (item.videoUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.videoUrl);
+        }
+      });
       setItems([]);
       setAudioItems([]);
+      setVideoItems([]);
     },
   }));
+
+  // Check if we have any items to display
+  const hasItems = (items.length > 0 || videoItems.length > 0 || audioItems.length > 0);
+
+  if (!hasItems) {
+    return null; // Don't render anything if no items
+  }
 
   return (
     <>
@@ -424,31 +584,88 @@ const ItemCarousel = forwardRef<ItemCarouselRef, ItemCarouselProps>(({ className
         className="hidden"
       />
 
-      {/* Stacked Items in chronological order */}
-      <div className={`absolute bottom-4 left-4 z-50 w-[280px] space-y-4 ${className}`}>
-        {/* Render Carousel for photos and emotions */}
-        {items.length > 0 && (
-          <GenericCarouselGallery
-            items={items}
-            onRemoveItem={removeItem}
-            renderItemContent={renderItemContent}
-            renderDialogContent={renderDialogContent}
-            title=""
-            className="w-full"
-          />
-        )}
-        
-        {/* Render Audio Player Cards */}
-        {audioItems.map((item) => (
-          <LiquidAudioPlayer
-            key={item.id}
-            audioUrl={item.audioUrl}
-            title={item.transcript || "Audio Recording"}
-            createdAt={item.createdAt}
-            onDelete={() => removeAudioItem(item.id)}
-            className="mb-4"
-          />
-        ))}
+      {/* Carousel Container - Responsive design with proper height management */}
+      <div className={`w-full ${className}`}>
+        {/* Desktop: Horizontal layout, Mobile: Compact vertical stack */}
+        <div className="lg:hidden">
+          {/* Mobile Layout - Compact vertical stack with smart scrolling */}
+          <div className="max-h-[35vh] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/30 space-y-2 pr-1">
+            {/* Render Carousel for photos, videos and emotions */}
+            {(items.length > 0 || videoItems.length > 0) && (
+              <div className="flex-shrink-0">
+                <GenericCarouselGallery
+                  items={[...items, ...videoItems]}
+                  onRemoveItem={removeItem}
+                  renderItemContent={renderItemContent}
+                  renderDialogContent={renderDialogContent}
+                  title=""
+                  className="w-full"
+                />
+              </div>
+            )}
+            
+            {/* Render Audio Player Cards */}
+            {audioItems.map((item) => (
+              <div key={item.id} className="flex-shrink-0">
+                <LiquidAudioPlayer
+                  audioUrl={item.audioUrl}
+                  title={item.transcript || "Audio Recording"}
+                  createdAt={item.createdAt}
+                  onDelete={() => removeAudioItem(item.id)}
+                  className="w-full"
+                />
+              </div>
+            ))}
+            
+            {/* Scroll Indicator for mobile */}
+            <div className="text-center py-1 opacity-50">
+              <div className="text-xs text-muted-foreground">
+                {allItems.length > 0 && "Scroll to see more"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout - Organized horizontal layout */}
+        <div className="hidden lg:block">
+          <div className="flex gap-4 max-w-[600px] max-h-[250px] overflow-hidden">
+            {/* Visual Content Section (photos, videos, emotions) */}
+            {(items.length > 0 || videoItems.length > 0) && (
+              <div className="flex-shrink-0 w-[280px]">
+                <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/30 pr-2">
+                  <GenericCarouselGallery
+                    items={[...items, ...videoItems]}
+                    onRemoveItem={removeItem}
+                    renderItemContent={renderItemContent}
+                    renderDialogContent={renderDialogContent}
+                    title=""
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Audio Content Section */}
+            {audioItems.length > 0 && (
+              <div className="flex-1 min-w-[200px] max-w-[300px]">
+                <div className="h-full overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/30 pr-2">
+                  <div className="space-y-2">
+                    {audioItems.map((item) => (
+                      <LiquidAudioPlayer
+                        key={item.id}
+                        audioUrl={item.audioUrl}
+                        title={item.transcript || "Audio Recording"}
+                        createdAt={item.createdAt}
+                        onDelete={() => removeAudioItem(item.id)}
+                        className="w-full"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Emotion Dialog */}
@@ -473,15 +690,19 @@ ItemCarousel.displayName = "ItemCarousel";
 export interface ItemCarouselRef {
   addAudioRecording: (audioBlob: Blob, transcript?: string, title?: string) => void;
   addAudioFromUrl: (audioUrl: string, transcript?: string, duration?: number, createdAt?: Date) => void;
+  addVideoRecording: (videoBlob: Blob, duration: number, caption?: string) => void;
+  addVideoFromUrl: (videoUrl: string, duration?: number, caption?: string, createdAt?: Date) => void;
   addEmotion: (emotion: string, intensity: number, note?: string, emotions?: string[], triggers?: string[]) => void;
   addPhoto: () => void;
   addPhotoFromFile: (file: File) => void;
   addPhotoFromDataUrl: (url: string, name: string, caption?: string) => void;
   getAudioCount: () => number;
+  getVideoCount: () => number;
   getAllItems: () => {
     photos: PhotoItem[];
     emotions: EmotionItem[];
     audioRecordings: AudioItem[];
+    videoRecordings: VideoItem[];
   };
   clearAllItems: () => void;
 }

@@ -1,7 +1,6 @@
 // Server-side database helpers using Firebase Admin SDK
 import { adminDb } from './firebaseAdmin';
-import { EmotionLog, JournalEntry } from './dbHelpers';
-import { Moment } from './moments';
+import { EmotionLog, JournalEntry, Moment } from './types';
 
 /**
  * Get emotion logs for a user using Admin SDK
@@ -9,7 +8,7 @@ import { Moment } from './moments';
 export async function getEmotionLogsServer(userId: string, limit: number = 50): Promise<EmotionLog[]> {
   try {
     console.log(`[SERVER] Getting emotion logs for user: ${userId}`);
-    
+
     const snapshot = await adminDb
       .collection('users')
       .doc(userId)
@@ -37,7 +36,7 @@ export async function getEmotionLogsServer(userId: string, limit: number = 50): 
 export async function getJournalEntriesServer(userId: string, limit: number = 50): Promise<JournalEntry[]> {
   try {
     console.log(`[SERVER] Getting journal entries for user: ${userId}`);
-    
+
     const snapshot = await adminDb
       .collection('users')
       .doc(userId)
@@ -65,7 +64,7 @@ export async function getJournalEntriesServer(userId: string, limit: number = 50
 export async function getMomentsServer(userId: string, limit: number = 100): Promise<Moment[]> {
   try {
     console.log(`[SERVER] Getting moments for user: ${userId}`);
-    
+
     const snapshot = await adminDb
       .collection('moments')
       .where('userId', '==', userId)
@@ -92,7 +91,7 @@ export async function getMomentsServer(userId: string, limit: number = 100): Pro
 export async function createMomentServer(momentData: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   try {
     console.log(`[SERVER] Creating moment for user: ${momentData.userId}`);
-    
+
     const docRef = await adminDb.collection('moments').add({
       ...momentData,
       createdAt: new Date(),
@@ -113,10 +112,10 @@ export async function createMomentServer(momentData: Omit<Moment, 'id' | 'create
 export async function getMomentServer(userId: string, momentId: string): Promise<Moment | null> {
   try {
     console.log(`[SERVER] Getting moment ${momentId} for user: ${userId}`);
-    
+
     // Try top-level collection first
     const doc = await adminDb.collection('moments').doc(momentId).get();
-    
+
     if (doc.exists && doc.data()?.userId === userId) {
       return { id: doc.id, ...doc.data() } as Moment;
     }
@@ -135,11 +134,11 @@ export async function getMomentServer(userId: string, momentId: string): Promise
 export async function updateMomentServer(userId: string, momentId: string, updates: Partial<Moment>): Promise<void> {
   try {
     console.log(`[SERVER] Updating moment ${momentId} for user: ${userId}`);
-    
+
     // Try top-level collection first
     const momentRef = adminDb.collection('moments').doc(momentId);
     const momentDoc = await momentRef.get();
-    
+
     if (momentDoc.exists && momentDoc.data()?.userId === userId) {
       await momentRef.update({
         ...updates,
@@ -162,11 +161,11 @@ export async function updateMomentServer(userId: string, momentId: string, updat
 export async function deleteMomentServer(userId: string, momentId: string): Promise<void> {
   try {
     console.log(`[SERVER] Deleting moment ${momentId} for user: ${userId}`);
-    
+
     // Try top-level collection first
     const momentRef = adminDb.collection('moments').doc(momentId);
     const momentDoc = await momentRef.get();
-    
+
     if (momentDoc.exists && momentDoc.data()?.userId === userId) {
       await momentRef.delete();
       console.log(`[SERVER] Deleted moment from top-level collection: ${momentId}`);

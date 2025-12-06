@@ -65,15 +65,15 @@ export default function MotionButton03({
             case "saved":
                 return (
                     <>
-                        <Check className="w-4 h-4" />
+                        <Check className="w-3.5 h-3.5" />
                         <span>Saved</span>
                     </>
                 );
             case "saving":
                 return (
                     <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Saving...</span>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving</span>
                     </>
                 );
             case "update":
@@ -85,14 +85,14 @@ export default function MotionButton03({
             case "updating":
                 return (
                     <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Updating...</span>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating</span>
                     </>
                 );
             case "updated":
                 return (
                     <>
-                        <Check className="w-4 h-4" />
+                        <Check className="w-3.5 h-3.5" />
                         <span>Updated</span>
                     </>
                 );
@@ -109,88 +109,61 @@ export default function MotionButton03({
         <motion.button
             className={cn(
                 "relative group overflow-hidden",
-                "h-10 px-5 rounded-lg w-[100px]", // Fixed width to prevent layout shifts
+                "h-9 px-4 rounded-lg min-w-[90px]", // Slightly smaller, min-width instead of fixed
                 "flex items-center justify-center gap-2",
                 "text-sm font-medium",
-                "transition-all duration-300",
+                "transition-all duration-200",
                 // Loading states
                 (buttonState === "saving" || buttonState === "updating") &&
-                    "bg-white/5 dark:bg-zinc-800/90 ring-1 ring-blue-500/20 dark:ring-blue-500/30 cursor-wait",
+                    "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 cursor-wait",
                 // Final states (unclickable)
                 buttonState === "saved" &&
-                    "bg-green-500/10 dark:bg-green-500/20 ring-1 ring-green-500/20 dark:ring-green-500/30 cursor-not-allowed",
+                    "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 cursor-not-allowed",
                 buttonState === "updated" &&
-                    "bg-blue-500/10 dark:bg-blue-500/20 ring-1 ring-blue-500/20 dark:ring-blue-500/30 cursor-not-allowed",
+                    "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 cursor-not-allowed",
                 // Default clickable states
                 (buttonState === "done" || buttonState === "update") &&
-                    "bg-zinc-900 dark:bg-zinc-100 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
-                "shadow-[0_1px_2px_rgba(0,0,0,0.1)]",
-                "backdrop-blur-xs",
+                    "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200",
+                "border border-transparent",
                 className
             )}
             onClick={handleClick}
             whileHover={{ 
-                scale: (buttonState === "done" || buttonState === "update") ? 1.01 : 1 
+                scale: (buttonState === "done" || buttonState === "update") ? 1.02 : 1 
             }}
             whileTap={{ 
                 scale: (buttonState === "done" || buttonState === "update") ? 0.98 : 1 
             }}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
         >
-            {/* Background Gradient Animation */}
-            <AnimatePresence>
-                {(buttonState === "saving" || buttonState === "updating") && (
-                    <motion.div
-                        className="absolute inset-0 bg-linear-to-r from-blue-500/10 to-blue-600/10
-                                     dark:from-blue-900/30 dark:to-blue-800/30"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                    />
-                )}
+            {/* Content */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={buttonState}
+                    className="relative flex items-center gap-1.5 justify-center"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.15 }}
+                >
+                    {getButtonContent()}
+                </motion.div>
             </AnimatePresence>
 
-            {/* Content */}
-            <div
-                className={cn(
-                    "relative flex items-center gap-2 justify-center",
-                    // Loading states
-                    (buttonState === "saving" || buttonState === "updating") &&
-                        "text-blue-500 dark:text-blue-400",
-                    // Final states  
-                    buttonState === "saved" &&
-                        "text-green-600 dark:text-green-400",
-                    buttonState === "updated" &&
-                        "text-blue-600 dark:text-blue-400",
-                    // Default clickable states
-                    (buttonState === "done" || buttonState === "update") &&
-                        "text-white dark:text-zinc-900"
-                )}
-            >
-                {getButtonContent()}
-            </div>
-
-            {/* Progress Bar */}
+            {/* Subtle loading indicator */}
             <AnimatePresence>
                 {(buttonState === "saving" || buttonState === "updating") && (
                     <motion.div
-                        className="absolute bottom-0 left-0 right-0 h-[1px] bg-linear-to-r from-blue-400/50 via-blue-500/50 to-transparent"
-                        initial={{ scaleX: 1, opacity: 0 }}
-                        animate={{ scaleX: 0, opacity: 1 }}
+                        className="absolute bottom-0 left-0 h-0.5 bg-zinc-400 dark:bg-zinc-600"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
                         exit={{ opacity: 0 }}
                         transition={{
-                            scaleX: {
-                                duration: loadingDuration / 1000,
-                                ease: "linear"
-                            },
-                            opacity: {
-                                duration: 0.2,
-                                ease: "easeOut"
-                            }
+                            duration: loadingDuration / 1000,
+                            ease: "linear"
                         }}
-                        style={{ transformOrigin: "left" }}
                     />
                 )}
             </AnimatePresence>

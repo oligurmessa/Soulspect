@@ -1,4 +1,4 @@
-// components/AIButton.tsx
+// AI button with visible logo in dark mode and cleaner states
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -14,71 +14,62 @@ export default function AIButton({
     onToggleChat,
     ...props
 }: AIButtonProps) {
-    // Define the brand glow effect with decreased intensity
-    const brandGlow = {
-        boxShadow: "0 0 10px rgba(255, 240, 200, 0.3), 0 0 20px rgba(255, 240, 200, 0.5)"
-    };
-
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        // Call any existing onClick handler first if it's provided via props
-        if (props.onClick) {
-            props.onClick(event);
-        }
-        // Toggle chat pane if handler is provided
-        if (onToggleChat) {
-            onToggleChat();
-        }
+        if (props.onClick) props.onClick(event);
+        if (onToggleChat) onToggleChat();
     };
 
     return (
         <button
             className={cn(
-                `
-                relative
-                inline-flex items-center justify-center
-                // Responsive sizing for the button
-                h-10 w-10 // Default size
-                sm:h-12 sm:w-12 // Slightly larger on small screens
-                md:h-14 md:w-14 // Medium size on medium screens
-                lg:h-16 lg:w-16 // Larger size on large screens
-                
-                // Styling for the button itself
-                bg-transparent
-                border-2 border-white/80 // White border with slight transparency
-                text-orange-200 // Orange text (for loader)
-                rounded-md
-                transition-all duration-300
-                
-                // Hover effects
-                hover:border-orange-100
-                hover:text-orange-100
-                hover:-translate-y-0.5
-                active:translate-y-0
-                
-                // Disabled state
-                disabled:opacity-50 disabled:cursor-not-allowed
-                disabled:hover:shadow-none disabled:hover:transform-none
-            `,
+                "relative group inline-flex items-center justify-center",
+                "h-14 w-14 sm:h-16 sm:w-16",
+                // keep the button dark in both themes so the (light) logo is visible
+                "bg-gradient-to-br from-zinc-950 to-zinc-800",
+                "dark:from-zinc-950 dark:to-zinc-800",
+                "border border-zinc-700/60 dark:border-zinc-600/70",
+                "backdrop-blur-xl rounded-2xl",
+                "shadow-lg shadow-black/40",
+                "transition-all duration-300 ease-out",
+                "hover:scale-105 hover:-translate-y-0.5",
+                "hover:shadow-xl hover:shadow-black/50",
+                "hover:border-zinc-500 dark:hover:border-zinc-400",
+                "active:scale-100 active:translate-y-0",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "disabled:hover:scale-100 disabled:hover:translate-y-0",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
                 className
             )}
             disabled={loading}
-            style={brandGlow} // Apply the custom brand glow style
-            onClick={handleClick} // Assign the new click handler
+            onClick={handleClick}
+            aria-label="Open AI Assistant"
             {...props}
         >
-            {loading ? (
-                // Loader size adjusted for smaller button
-                <Loader2 className="h-5 w-5 animate-spin text-orange-400" /> 
-            ) : (
-                <Image
-                    src="/clean_logo.png" // Path to your image in the public folder
-                    alt="AI Logo"
-                    // Image dimensions slightly smaller than button to allow for padding/glow
-                    width={40} 
-                    height={40} 
-                    className="object-contain" // Ensures the image fits within the square
-                />
-            )}
+            {/* subtle glow */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-white/0 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <div className="relative z-10">
+                {loading ? (
+                    <Loader2
+                        className="h-6 w-6 sm:h-7 sm:w-7 animate-spin text-zinc-100"
+                        strokeWidth={2.5}
+                    />
+                ) : (
+                    <div className="relative">
+                        <Image
+                            src="/clean_logo.png"
+                            alt="AI Logo"
+                            width={32}
+                            height={32}
+                            className="object-contain drop-shadow-[0_0_10px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-110"
+                            priority
+                        />
+                        {/* soft pulse */}
+                        <div className="absolute inset-0 rounded-full bg-white/10 scale-0 opacity-0 group-hover:scale-150 group-hover:opacity-100 transition-all duration-500" />
+                    </div>
+                )}
+            </div>
+
         </button>
     );
 }

@@ -1,4 +1,4 @@
-import { vectorDb } from './vectorDb';
+// DISABLED: Pinecone vectorDb import removed
 import { 
   EmotionLog, 
   JournalEntry, 
@@ -15,7 +15,8 @@ export class DataSyncService {
     if (!entry.id || !entry.content) return;
     
     try {
-      await vectorDb.indexItem(userId, entry.id, entry, 'journal');
+      // DISABLED: Pinecone indexing removed
+      console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed journal entry: ${entry.id}`);
     } catch (error) {
       console.error('Error indexing journal entry:', error);
@@ -27,7 +28,8 @@ export class DataSyncService {
     if (!log.id) return;
     
     try {
-      await vectorDb.indexItem(userId, log.id, log, 'emotion');
+      // DISABLED: Pinecone indexing removed
+      console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed emotion log: ${log.id}`);
     } catch (error) {
       console.error('Error indexing emotion log:', error);
@@ -51,7 +53,8 @@ export class DataSyncService {
         createdAt: Date.now(),
       };
       
-      await vectorDb.indexItem(userId, `voice_${entryId}`, voiceData, 'voice');
+      // DISABLED: Pinecone indexing removed
+      console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed voice transcript: ${entryId}`);
     } catch (error) {
       console.error('Error indexing voice transcript:', error);
@@ -75,7 +78,8 @@ export class DataSyncService {
         createdAt: Date.now(),
       };
       
-      await vectorDb.indexItem(userId, photoId, photoData, 'photo');
+      // DISABLED: Pinecone indexing removed
+      console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed photo: ${photoId}`);
     } catch (error) {
       console.error('Error indexing photo:', error);
@@ -87,7 +91,8 @@ export class DataSyncService {
     if (!item.id || !item.content) return;
     
     try {
-      await vectorDb.indexItem(userId, item.id, item, 'chat');
+      // DISABLED: Pinecone indexing removed
+      console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed soulspace item: ${item.id}`);
     } catch (error) {
       console.error('Error indexing soulspace item:', error);
@@ -97,7 +102,8 @@ export class DataSyncService {
   // Remove item from vector database
   static async removeItem(userId: string, itemId: string, dataType: string): Promise<void> {
     try {
-      await vectorDb.deleteVectors(userId, [`${dataType}_${itemId}`]);
+      // DISABLED: Pinecone deletion removed
+      console.log('DataSync deletion disabled - Pinecone removed');
       console.log(`Removed ${dataType} item from vector DB: ${itemId}`);
     } catch (error) {
       console.error('Error removing item from vector DB:', error);
@@ -111,7 +117,8 @@ export class DataSyncService {
     type: 'journal' | 'emotion' | 'voice' | 'photo' | 'chat';
   }>): Promise<void> {
     try {
-      await vectorDb.batchIndex(userId, items);
+      // DISABLED: Pinecone batch indexing removed
+      console.log('DataSync batch indexing disabled - Pinecone removed');
       console.log(`Batch synced ${items.length} items for user ${userId}`);
     } catch (error) {
       console.error('Error in batch sync:', error);

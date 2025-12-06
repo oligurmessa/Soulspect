@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from 'sonner';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider } from '@/components/theme-provider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -13,13 +13,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'soulspect - Effortless Emotion Logging',
+  title: 'soulspect - Personal Private Intelligence',
   description: 'Transform your daily emotional experiences into meaningful insights with AI-powered growth tracking.',
   keywords: ['emotion tracking', 'mood journal', 'AI insights', 'personal growth', 'mental health'],
   authors: [{ name: 'soulspect' }],
   creator: 'soulspect',
   openGraph: {
-    title: 'soulspect - Effortless Emotion Logging',
+    title: 'soulspect - Personal Private Intelligence',
     description: 'Transform your daily emotional experiences into meaningful insights with AI-powered growth tracking.',
     url: 'https://soulspect.com',
     siteName: 'soulspect',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'soulspect - Effortless Emotion Logging',
+    title: 'soulspect - Personal Private Intelligence',
     description: 'Transform your daily emotional experiences into meaningful insights with AI-powered growth tracking.',
   },
   robots: {
@@ -65,10 +65,13 @@ export default function RootLayout({
         This makes it the base layer for the entire page.
         We also include a fallback solid color.
       */}
-      <body className={`${inter.className} min-h-screen antialiased 
-                         bg-[#111111] dark:bg-gradient-to-b dark:from-[#1D1D1D] dark:to-[#111111]
-                         text-foreground`}>
-        <ThemeProvider attribute="class">
+      <body className={`${inter.className} min-h-screen antialiased`}>
+        <ThemeProvider 
+          attribute="class"
+          defaultTheme="system"
+          enableSystem={true}
+          storageKey="soulspect-theme"
+        >
           <AuthProvider>
             {children}
             <Toaster position="top-center" />

@@ -1,8 +1,10 @@
 /**
- * UNIFIED VECTOR SYSTEM - Optimized Integration with Firebase Moments
+ * DISABLED: PINECONE VECTOR SYSTEM
  * 
- * This file provides a clean, unified interface for all vector operations
- * integrated with the Firebase moments structure for maximum efficiency.
+ * This file contained client-side interfaces to deleted Pinecone API routes.
+ * REMOVED: All Pinecone/OpenAI references eliminated in migration to ChromaDB+Qwen
+ * 
+ * File kept for reference but all functions disabled.
  */
 
 import { Moment } from './moments';
@@ -34,7 +36,7 @@ export interface VectorIndexResult {
 
 export interface VectorSystemStatus {
   available: boolean;
-  provider: 'pinecone' | 'fallback' | 'none';
+  provider: 'chroma' | 'none'; // UPDATED: Removed 'pinecone' | 'fallback'
   indexed: number;
   errors: string[];
 }
@@ -46,138 +48,50 @@ export interface VectorSystemStatus {
  * Automatically handles fallbacks and errors gracefully
  */
 export class VectorSystem {
+  // ALL METHODS DISABLED - PINECONE API ROUTES REMOVED
   
-  // Get system status
+  private static throwDisabledError(): never {
+    throw new Error('VectorSystem disabled - Pinecone API routes removed. Use momentVectorService + ChromaDB instead.');
+  }
+  
+  // DISABLED: Pinecone API routes removed
   static async getStatus(userId: string): Promise<VectorSystemStatus> {
-    try {
-      const response = await fetch(`/api/vector-system/status?userId=${userId}`);
-      const result = await response.json();
-      return result.status || {
-        available: false,
-        provider: 'none',
-        indexed: 0,
-        errors: ['System unavailable']
-      };
-    } catch (error) {
-      return {
-        available: false,
-        provider: 'none',
-        indexed: 0,
-        errors: [error instanceof Error ? error.message : 'Unknown error']
-      };
-    }
+    this.throwDisabledError();
   }
 
-  // Index a moment for vector search (called automatically when moments are created)
+  // DISABLED: Pinecone API routes removed
   static async indexMoment(moment: Moment, force = false): Promise<VectorIndexResult> {
-    if (!moment.id) {
-      return { success: false, momentId: '', error: 'Moment must have an ID' };
-    }
-
-    try {
-      const response = await fetch('/api/vector-system/index', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moment, force }),
-      });
-
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.warn(`Vector indexing failed for moment ${moment.id}:`, result.error);
-      }
-
-      return {
-        success: result.success,
-        momentId: moment.id,
-        vectorId: result.vectorId,
-        error: result.error,
-      };
-    } catch (error) {
-      console.warn(`Vector indexing error for moment ${moment.id}:`, error);
-      return {
-        success: false,
-        momentId: moment.id,
-        error: error instanceof Error ? error.message : 'Network error',
-      };
-    }
+    this.throwDisabledError();
   }
 
-  // Batch index multiple moments
+  // DISABLED: Pinecone API routes removed
   static async batchIndexMoments(moments: Moment[]): Promise<{
     successful: number;
     failed: number;
     results: VectorIndexResult[];
   }> {
-    try {
-      const response = await fetch('/api/vector-system/batch-index', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moments }),
-      });
-
-      const result = await response.json();
-      return result.batchResult || {
-        successful: 0,
-        failed: moments.length,
-        results: moments.map(m => ({ success: false, momentId: m.id || '', error: 'Batch failed' })),
-      };
-    } catch (error) {
-      return {
-        successful: 0,
-        failed: moments.length,
-        results: moments.map(m => ({ 
-          success: false, 
-          momentId: m.id || '', 
-          error: error instanceof Error ? error.message : 'Network error' 
-        })),
-      };
-    }
+    this.throwDisabledError();
   }
 
-  // Semantic search across moments
+  // DISABLED: Pinecone API routes removed
   static async searchMoments(
     userId: string, 
     query: string, 
     options: VectorSearchOptions = {}
   ): Promise<VectorSearchResult[]> {
-    try {
-      const response = await fetch('/api/vector-system/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, query, options }),
-      });
-
-      const result = await response.json();
-      return result.results || [];
-    } catch (error) {
-      console.warn('Vector search failed, using fallback:', error);
-      return this.fallbackSearch(userId, query, options);
-    }
+    this.throwDisabledError();
   }
 
-  // Find similar moments to a given moment
+  // DISABLED: Pinecone API routes removed
   static async findSimilarMoments(
     userId: string, 
     referenceId: string, 
     options: Omit<VectorSearchOptions, 'topK'> & { topK?: number } = {}
   ): Promise<VectorSearchResult[]> {
-    try {
-      const response = await fetch('/api/vector-system/similar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, referenceId, options }),
-      });
-
-      const result = await response.json();
-      return result.results || [];
-    } catch (error) {
-      console.warn('Similar search failed:', error);
-      return [];
-    }
+    this.throwDisabledError();
   }
 
-  // AI-powered context retrieval for enhanced responses
+  // DISABLED: Pinecone API routes removed
   static async getAIContext(
     userId: string, 
     query: string, 
@@ -187,62 +101,26 @@ export class VectorSystem {
     patterns: string[];
     emotionalTrends: any;
   }> {
-    try {
-      const response = await fetch('/api/vector-system/ai-context', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, query, limit }),
-      });
-
-      const result = await response.json();
-      return result.context || { contexts: [], patterns: [], emotionalTrends: null };
-    } catch (error) {
-      console.warn('AI context retrieval failed:', error);
-      return { contexts: [], patterns: [], emotionalTrends: null };
-    }
+    this.throwDisabledError();
   }
 
-  // Re-index all moments for a user (maintenance operation)
+  // DISABLED: Pinecone API routes removed
   static async reindexUser(userId: string): Promise<{
     total: number;
     indexed: number;
     failed: number;
     duration: number;
   }> {
-    try {
-      const response = await fetch('/api/vector-system/reindex', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const result = await response.json();
-      return result.reindexResult || { total: 0, indexed: 0, failed: 0, duration: 0 };
-    } catch (error) {
-      console.error('User reindex failed:', error);
-      return { total: 0, indexed: 0, failed: 1, duration: 0 };
-    }
+    this.throwDisabledError();
   }
 
-  // Private fallback search using basic text similarity
+  // DISABLED: Pinecone API routes removed
   private static async fallbackSearch(
     userId: string, 
     query: string, 
     options: VectorSearchOptions
   ): Promise<VectorSearchResult[]> {
-    try {
-      const response = await fetch('/api/vector-system/fallback-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, query, options }),
-      });
-
-      const result = await response.json();
-      return result.results || [];
-    } catch (error) {
-      console.error('Even fallback search failed:', error);
-      return [];
-    }
+    this.throwDisabledError();
   }
 }
 

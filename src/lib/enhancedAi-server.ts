@@ -3,39 +3,16 @@
  * Uses server-side data access to avoid permission issues
  */
 
-import { getAllUserDataServer } from './vectorEngine';
-import { runGeminiPrompt } from './gemini';
-import VectorEngine from './vectorEngine';
+// DISABLED: vectorEngine imports removed (Pinecone services deleted)
+// import { getAllUserDataServer } from './vectorEngine';
+import { runLlamaPrompt } from './vertexai';
+// import VectorEngine from './vectorEngine';
 import { Moment } from './moments';
 
 export class EnhancedAIServerService {
-  // Index user data for AI analysis
+  // DISABLED: vectorEngine services removed
   static async indexUserData(userId: string): Promise<void> {
-    console.log(`Starting data indexing for user ${userId}`);
-    
-    try {
-      // Get all user data using server-side function
-      const moments = await getAllUserDataServer(userId);
-      
-      if (moments.length === 0) {
-        console.log(`No data found for user ${userId} to index`);
-        return;
-      }
-      
-      // Batch index all moments
-      const result = await VectorEngine.batchIndexMoments(moments, true);
-      
-      console.log(`Indexing complete for user ${userId}:`, {
-        total: moments.length,
-        successful: result.successful,
-        failed: result.failed,
-        duration: result.duration
-      });
-      
-    } catch (error) {
-      console.error('Error indexing user data:', error);
-      throw error;
-    }
+    throw new Error('enhancedAi-server.ts disabled - vectorEngine removed. Use momentVectorService + ChromaDB instead.');
   }
 
   // Generate enhanced AI response with pattern analysis
@@ -50,35 +27,9 @@ export class EnhancedAIServerService {
     relatedEntries?: any[];
   }> {
     try {
-      // Get user data for pattern analysis
-      const moments = await getAllUserDataServer(userId);
-      
-      if (moments.length === 0) {
-        return {
-          response: this.getFallbackResponse(mode),
-          patterns: [],
-          suggestions: [],
-          relatedEntries: []
-        };
-      }
-      
-      // Analyze patterns in user data
-      const patterns = this.analyzeUserPatterns(moments);
-      
-      // Generate contextual response
-      const response = await this.generateContextualResponse(query, moments.slice(0, 10), mode, patterns);
-      
-      return {
-        response,
-        patterns,
-        suggestions: this.generateSuggestions(patterns, mode),
-        relatedEntries: moments.slice(0, 3).map(m => ({
-          type: m.type,
-          preview: m.content.substring(0, 100),
-          timestamp: m.timestamp
-        }))
-      };
-      
+      // DISABLED: vectorEngine services removed
+      throw new Error('enhancedAi-server.ts disabled - vectorEngine removed.');
+
     } catch (error) {
       console.error('Error analyzing patterns:', error);
       return {
@@ -92,7 +43,7 @@ export class EnhancedAIServerService {
 
   private static analyzeUserPatterns(moments: Moment[]): string[] {
     const patterns: string[] = [];
-    
+
     try {
       // Analyze mood patterns
       const moodEntries = moments.filter(m => m.mood !== undefined);
@@ -100,7 +51,7 @@ export class EnhancedAIServerService {
         const avgMood = moodEntries.reduce((sum, m) => sum + (m.mood || 0), 0) / moodEntries.length;
         patterns.push(`Average mood: ${avgMood.toFixed(1)}/6`);
       }
-      
+
       // Analyze emotion frequency
       const emotionCounts: Record<string, number> = {};
       moments.forEach(m => {
@@ -108,42 +59,42 @@ export class EnhancedAIServerService {
           emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
         });
       });
-      
+
       const topEmotions = Object.entries(emotionCounts)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 3)
         .map(([emotion]) => emotion);
-      
+
       if (topEmotions.length > 0) {
         patterns.push(`Most frequent emotions: ${topEmotions.join(', ')}`);
       }
-      
+
       // Analyze content themes
       const contentWords = moments
         .map(m => m.content.toLowerCase())
         .join(' ')
         .split(/\\s+/)
         .filter(word => word.length > 4);
-      
+
       const wordCounts: Record<string, number> = {};
       contentWords.forEach(word => {
         wordCounts[word] = (wordCounts[word] || 0) + 1;
       });
-      
+
       const commonThemes = Object.entries(wordCounts)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 3)
         .map(([word]) => word);
-      
+
       if (commonThemes.length > 0) {
         patterns.push(`Common themes: ${commonThemes.join(', ')}`);
       }
-      
+
     } catch (error) {
       console.error('Error finding fallback patterns:', error);
       patterns.push('Pattern analysis temporarily unavailable');
     }
-    
+
     return patterns;
   }
 
@@ -153,12 +104,12 @@ export class EnhancedAIServerService {
     mode: string,
     patterns: string[]
   ): Promise<string> {
-    const context = recentMoments.map(m => 
+    const context = recentMoments.map(m =>
       `${m.type}: ${m.content.substring(0, 200)}`
     ).join('\\n');
-    
+
     const patternContext = patterns.join('\\n');
-    
+
     const prompt = `
 You are a compassionate AI companion helping with emotional well-being and self-discovery.
 
@@ -181,16 +132,16 @@ Keep the response to 2-3 sentences and focus on being helpful and empathetic.
 `;
 
     try {
-      return await runGeminiPrompt(prompt);
+      return await runLlamaPrompt(prompt);
     } catch (error) {
-      console.error('Gemini API error:', error);
+      console.error('Vertex AI API error:', error);
       return this.getFallbackResponse(mode);
     }
   }
 
   private static generateSuggestions(patterns: string[], mode: string): string[] {
     const suggestions = [];
-    
+
     switch (mode) {
       case 'explore':
         suggestions.push('Try journaling about recurring themes in your thoughts');
@@ -208,7 +159,7 @@ Keep the response to 2-3 sentences and focus on being helpful and empathetic.
         suggestions.push('Continue tracking your emotional patterns');
         suggestions.push('Take time for self-reflection');
     }
-    
+
     return suggestions;
   }
 
@@ -219,7 +170,7 @@ Keep the response to 2-3 sentences and focus on being helpful and empathetic.
       decide: "Decisions become clearer when we align with your deeper knowing. What does your intuition whisper about this choice?",
       normal: "Thank you for sharing that with me. I'm here to support your journey of self-discovery."
     };
-    
+
     return responses[mode as keyof typeof responses] || responses.normal;
   }
 }

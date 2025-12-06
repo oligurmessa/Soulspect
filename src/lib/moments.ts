@@ -4,182 +4,12 @@ import {
   updateDoc, deleteDoc, limit, Timestamp
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { Moment, Attachment, AIInsight, VectorMetadata } from "./types";
 
-/* ---------- UNIFIED MOMENT TYPES ---------- */
+export * from "./types";
 
-export interface Moment {
-  id?: string;
-  userId: string;
-  type: 'journal' | 'emotion' | 'voice' | 'photo' | 'video' | 'chat';
-  title?: string;
-  content: string;
-  timestamp: Timestamp;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  
-  // Emotional context (applicable to all types)
-  mood?: number;           // 0-6 scale
-  emotions?: string[];     // Selected emotions
-  triggers?: string[];     // What caused this moment
-  intensity?: number;      // 1-10 emotional intensity
-  
-  // Metadata
-  tags?: string[];
-  location?: string;
-  weather?: string;
-  
-  // Media attachments
-  attachments?: string[];  // File URLs
-  
-  // Type-specific data
-  journalData?: {
-    entryType: 'text' | 'voice' | 'video';
-    prompt?: string;
-    isDraft: boolean;
-    wordCount?: number;
-  };
-  
-  emotionData?: {
-    context?: string;
-    previousMood?: number;
-    moodChange?: number;
-  };
-  
-  voiceData?: {
-    transcript: string;
-    duration: number;        // seconds
-    audioUrl?: string;
-    language?: string;
-    confidence?: number;
-  };
-  
-  photoData?: {
-    caption: string;
-    name: string;
-    imageUrl: string;
-    aiDescription?: string;
-    faces?: number;
-    objects?: string[];
-  };
-  
-  videoData?: {
-    caption?: string;
-    duration: number;        // seconds
-    videoUrl: string;
-    thumbnail?: string;
-    transcript?: string;
-  };
-  
-  chatData?: {
-    userMessage: string;
-    aiResponse: string;
-    mode?: 'explore' | 'release' | 'decide' | 'normal';
-    model?: string;
-    context?: any[];
-    insights?: string[];
-  };
-}
+/* ---------- HELPER FUNCTIONS ---------- */
 
-export interface Attachment {
-  id?: string;
-  userId: string;
-  momentId: string;
-  type: 'image' | 'audio' | 'video' | 'document';
-  filename: string;
-  url: string;
-  size: number;            // bytes
-  mimeType: string;
-  uploadedAt: Timestamp;
-  
-  // Media-specific metadata
-  imageData?: {
-    width: number;
-    height: number;
-    caption?: string;
-    aiDescription?: string;
-  };
-  
-  audioData?: {
-    duration: number;        // seconds
-    transcript?: string;
-    language?: string;
-  };
-  
-  videoData?: {
-    duration: number;        // seconds
-    width: number;
-    height: number;
-    thumbnail?: string;
-    transcript?: string;
-  };
-}
-
-export interface AIInsight {
-  id?: string;
-  userId: string;
-  type: 'pattern' | 'trend' | 'suggestion' | 'milestone';
-  title: string;
-  description: string;
-  confidence: number;      // 0-1 confidence score
-  createdAt: Timestamp;
-  
-  // Pattern-specific data
-  patternData?: {
-    frequency: number;
-    triggers: string[];
-    emotions: string[];
-    timeOfDay?: string;
-    dayOfWeek?: string;
-    season?: string;
-  };
-  
-  // Trend-specific data
-  trendData?: {
-    direction: 'improving' | 'declining' | 'stable';
-    metric: string;
-    timeframe: number;       // days
-    significance: number;    // 0-1
-  };
-  
-  // Related moments
-  relatedMoments: string[];  // Moment IDs
-  
-  // Actionable suggestions
-  suggestions?: string[];
-}
-
-export interface VectorMetadata {
-  id?: string;
-  userId: string;
-  momentId: string;
-  vectorId: string;        // ID in Pinecone
-  indexed: boolean;
-  indexedAt?: Timestamp;
-  lastUpdated: Timestamp;
-  
-  // Vector properties
-  dimensions: number;
-  model: string;           // embedding model used
-  
-  // Search optimization
-  contentPreview: string;  // First 200 chars
-  searchableText: string;  // Processed text for search
-  
-  // Metadata for filtering
-  momentType: Moment['type'];
-  emotionContext?: {
-    mood?: number;
-    emotions?: string[];
-    triggers?: string[];
-  };
-  
-  timeContext: {
-    timestamp: Timestamp;
-    dayOfWeek: number;     // 0-6
-    hourOfDay: number;     // 0-23
-    season: string;        // spring, summer, fall, winter
-  };
-}
 
 /* ---------- MOMENT CRUD OPERATIONS ---------- */
 
@@ -189,7 +19,7 @@ export const createMoment = async (moment: Omit<Moment, 'id' | 'createdAt' | 'up
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
-  
+
   // Create in top-level collection for better server access
   const docRef = await addDoc(collection(db, "moments"), momentData);
   return docRef.id;
@@ -201,18 +31,18 @@ export const getMoment = async (userId: string, momentId: string): Promise<Momen
   if (momentDoc.exists() && momentDoc.data()?.userId === userId) {
     return { id: momentDoc.id, ...momentDoc.data() } as Moment;
   }
-  
+
   // Fallback to subcollection for backward compatibility
   const subMomentDoc = await getDoc(doc(db, "users", userId, "moments", momentId));
   if (subMomentDoc.exists()) {
     return { id: subMomentDoc.id, ...subMomentDoc.data() } as Moment;
   }
-  
+
   return null;
 };
 
 export const getMoments = async (
-  userId: string, 
+  userId: string,
   options: {
     type?: Moment['type'];
     limit?: number;
@@ -246,7 +76,7 @@ export const getMoments = async (
   try {
     const snapshot = await getDocs(q);
     const topLevelMoments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Moment));
-    
+
     // If we found moments in top-level collection, return them
     if (topLevelMoments.length > 0) {
       return topLevelMoments;
@@ -291,7 +121,7 @@ export const updateMoment = async (userId: string, momentId: string, updates: Pa
   try {
     const topLevelRef = doc(db, "moments", momentId);
     const topLevelDoc = await getDoc(topLevelRef);
-    
+
     if (topLevelDoc.exists() && topLevelDoc.data()?.userId === userId) {
       return updateDoc(topLevelRef, {
         ...updates,
@@ -301,7 +131,7 @@ export const updateMoment = async (userId: string, momentId: string, updates: Pa
   } catch (error) {
     console.warn('Error updating top-level moment, trying subcollection:', error);
   }
-  
+
   // Fallback to subcollection
   const momentRef = doc(db, "users", userId, "moments", momentId);
   return updateDoc(momentRef, {
@@ -315,14 +145,14 @@ export const deleteMoment = async (userId: string, momentId: string) => {
   try {
     const topLevelRef = doc(db, "moments", momentId);
     const topLevelDoc = await getDoc(topLevelRef);
-    
+
     if (topLevelDoc.exists() && topLevelDoc.data()?.userId === userId) {
       return deleteDoc(topLevelRef);
     }
   } catch (error) {
     console.warn('Error deleting top-level moment, trying subcollection:', error);
   }
-  
+
   // Fallback to subcollection
   const momentRef = doc(db, "users", userId, "moments", momentId);
   return deleteDoc(momentRef);
@@ -335,7 +165,7 @@ export const createAttachment = async (attachment: Omit<Attachment, 'id' | 'uplo
     ...attachment,
     uploadedAt: serverTimestamp(),
   };
-  
+
   const docRef = await addDoc(collection(db, "users", attachment.userId, "attachments"), attachmentData);
   return docRef.id;
 };
@@ -346,7 +176,7 @@ export const getAttachments = async (userId: string, momentId: string): Promise<
     where("momentId", "==", momentId),
     orderBy("uploadedAt", "desc")
   );
-  
+
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attachment));
 };
@@ -363,7 +193,7 @@ export const createInsight = async (insight: Omit<AIInsight, 'id' | 'createdAt'>
     ...insight,
     createdAt: serverTimestamp(),
   };
-  
+
   const docRef = await addDoc(collection(db, "users", insight.userId, "insights"), insightData);
   return docRef.id;
 };
@@ -390,7 +220,7 @@ export const createVectorMetadata = async (metadata: Omit<VectorMetadata, 'id' |
     ...metadata,
     lastUpdated: serverTimestamp(),
   };
-  
+
   const docRef = await addDoc(collection(db, "users", metadata.userId, "vectorMetadata"), metadataData);
   return docRef.id;
 };
@@ -401,7 +231,7 @@ export const getVectorMetadata = async (userId: string, momentId: string): Promi
     where("momentId", "==", momentId),
     limit(1)
   );
-  
+
   const snapshot = await getDocs(q);
   if (!snapshot.empty) {
     const doc = snapshot.docs[0];
@@ -411,8 +241,8 @@ export const getVectorMetadata = async (userId: string, momentId: string): Promi
 };
 
 export const updateVectorMetadata = async (
-  userId: string, 
-  metadataId: string, 
+  userId: string,
+  metadataId: string,
   updates: Partial<VectorMetadata>
 ) => {
   const metadataRef = doc(db, "users", userId, "vectorMetadata", metadataId);
@@ -431,11 +261,11 @@ export const getMomentsByType = async (userId: string, type: Moment['type'], lim
 export const getRecentMoments = async (userId: string, days = 30, limitCount = 100): Promise<Moment[]> => {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
-  
-  return getMoments(userId, { 
-    startDate, 
+
+  return getMoments(userId, {
+    startDate,
     endDate: new Date(),
-    limit: limitCount 
+    limit: limitCount
   });
 };
 
@@ -477,11 +307,11 @@ export const searchMoments = async (
   // Client-side filtering for search term and emotions
   return moments.filter(moment => {
     const contentMatch = moment.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        moment.title?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const emotionMatch = !options.emotions || 
-                        options.emotions.some(emotion => moment.emotions?.includes(emotion));
-    
+      moment.title?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const emotionMatch = !options.emotions ||
+      options.emotions.some(emotion => moment.emotions?.includes(emotion));
+
     return contentMatch && emotionMatch;
   });
 };

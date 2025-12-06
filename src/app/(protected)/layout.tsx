@@ -10,8 +10,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner"
 import { Geist, Geist_Mono } from "next/font/google"
 import { cn } from "@/lib/utils"
 import { NuqsAdapter } from "nuqs/adapters/next/app";
-import { LockProvider } from "@/context/LockContext";
-import AppLockScreen from "@/components/AppLockScreen";
+
 
 
 
@@ -45,27 +44,24 @@ export default function ProtectedLayout({
   }
 
   return (
-    <LockProvider>
-      <AppLockScreen />
-      <div
-        className={cn(
-          "h-screen w-screen overflow-hidden flex flex-col",
-          geistSans.variable,
-          geistMono.variable,
-          "antialiased"
-        )}
-      >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <SiteHeader />
-            <NuqsAdapter>
-              {/* Main needs to be flex container to handle children growth properly */}
-              <main className="flex-1 h-full overflow-hidden">{children}</main>
-            </NuqsAdapter>
-          </SidebarInset>
-        </SidebarProvider>
-      </div>
-    </LockProvider>
+    <div
+      className={cn(
+        "h-screen w-screen overflow-hidden flex flex-col bg-zinc-50 dark:bg-[#191919]",
+        geistSans.variable,
+        geistMono.variable,
+        "antialiased"
+      )}
+    >
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <SiteHeader />
+          <NuqsAdapter>
+            {/* Main needs to be flex container to handle children growth properly */}
+            <main className="flex-1 h-full overflow-hidden">{children}</main>
+          </NuqsAdapter>
+        </SidebarInset>
+      </SidebarProvider>
+    </div>
   )
 }

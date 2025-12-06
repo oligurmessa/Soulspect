@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMomentServer, getMomentsServer, getMomentServer } from '@/lib/dbHelpersServer';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
-import ServerVectorService from '@/lib/serverVectorService';
+import { momentVectorService } from '@/lib/momentVectorService';
 import { Moment } from '@/lib/moments';
 
 // Create a new moment
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       try {
         const moment = await getMomentServer(momentData.userId, momentId);
         if (moment) {
-          await ServerVectorService.indexMoment(moment);
+          await momentVectorService.indexMoment(moment);
         }
       } catch (indexError) {
         console.error('Error indexing moment:', indexError);

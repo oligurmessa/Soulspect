@@ -80,7 +80,7 @@ const AnalyticsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#191919] p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* You can re-add the AI Insight Header here if needed */}
         

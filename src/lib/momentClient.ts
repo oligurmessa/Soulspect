@@ -70,6 +70,38 @@ export class MomentClient {
     return result.moments;
   }
 
+  // Get a single moment by ID
+  static async getMoment(momentId: string, userId?: string): Promise<Moment | null> {
+    const headers = await this.getAuthHeaders();
+    
+    // If userId is not provided, extract it from the auth token
+    let userIdToUse = userId;
+    if (!userIdToUse) {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('User not authenticated and userId not provided');
+      }
+      userIdToUse = user.uid;
+    }
+
+    const params = new URLSearchParams({ userId: userIdToUse });
+    const response = await fetch(`/api/moments/${momentId}?${params.toString()}`, {
+      headers,
+    });
+    const result = await response.json();
+    
+    console.log(`[MomentClient] Get moment ${momentId}:`, result);
+    
+    if (!result.success) {
+      if (result.error === 'Moment not found') {
+        return null;
+      }
+      throw new Error(result.error || 'Failed to fetch moment');
+    }
+
+    return result.moment;
+  }
+
   // Search moments using vector similarity
   static async searchMoments(
     userId: string,

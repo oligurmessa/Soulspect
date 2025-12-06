@@ -17,6 +17,8 @@ interface AIInputWithLoadingProps {
   className?: string;
   autoAnimate?: boolean;
   growDirection?: 'up' | 'down';
+  inputClassName?: string;
+  disabled?: boolean;
 }
 
 export function AIInputWithLoading({
@@ -28,12 +30,14 @@ export function AIInputWithLoading({
   thinkingDuration = 1000,
   onSubmit,
   className,
+  inputClassName,
   autoAnimate = false,
-  growDirection = 'down'
+  growDirection = 'down',
+  disabled = false
 }: AIInputWithLoadingProps) {
   const [inputValue, setInputValue] = useState("");
   const [submitted, setSubmitted] = useState(autoAnimate);
-  
+
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight,
     maxHeight,
@@ -61,12 +65,12 @@ export function AIInputWithLoading({
 
   const handleSubmit = async () => {
     if (!inputValue.trim() || submitted) return;
-    
+
     setSubmitted(true);
     await onSubmit?.(inputValue);
     setInputValue("");
     adjustHeight(true);
-    
+
     setTimeout(() => {
       setSubmitted(false);
     }, loadingDuration);
@@ -84,7 +88,8 @@ export function AIInputWithLoading({
               "placeholder:text-black/70 dark:placeholder:text-white/70",
               "border-none ring-black/30 dark:ring-white/30",
               "text-black dark:text-white resize-none text-wrap leading-[1.2]",
-              `min-h-[${minHeight}px]`
+              `min-h-[${minHeight}px]`,
+              inputClassName
             )}
             ref={textareaRef}
             value={inputValue}
@@ -98,7 +103,7 @@ export function AIInputWithLoading({
                 handleSubmit();
               }
             }}
-            disabled={submitted}
+            disabled={submitted || disabled}
           />
           <button
             onClick={handleSubmit}
@@ -107,7 +112,7 @@ export function AIInputWithLoading({
               submitted ? "bg-none" : "bg-black/5 dark:bg-white/5"
             )}
             type="button"
-            disabled={submitted}
+            disabled={submitted || disabled}
           >
             {submitted ? (
               <div
@@ -124,8 +129,7 @@ export function AIInputWithLoading({
             )}
           </button>
         </div>
-        <p className="pl-4 h-4 text-xs mx-auto text-black/70 dark:text-white/70">
-        </p>
+
       </div>
     </div>
   );
