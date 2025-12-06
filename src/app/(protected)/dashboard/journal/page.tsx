@@ -3,32 +3,24 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { SearchInput } from "@/components/ui/search-input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { LiquidAudioPlayer } from "@/components/liquid-audio-player";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { cn } from "@/lib/utils";
 
 import {
   Smile,
   Frown,
   Meh,
-  Heart,
   MessageSquare,
   Mic,
   Video,
-  FileText,
   ImageIcon,
   Clock,
   Edit2,
-  Filter,
-  X,
   Type,
   Tag,
   Paperclip,
   Bookmark,
   Trash2,
-  Menu,
 } from "lucide-react";
 import * as React from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -37,10 +29,6 @@ import { MomentClient } from "@/lib/momentClient";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-interface AttachmentInfo {
-  type: "photo" | "audio" | "video";
-  count: number;
-}
 
 interface MomentEntry {
   id: string;
@@ -97,12 +85,10 @@ export default function JournalPage() {
   const [viewDialogOpen, setViewDialogOpen] = React.useState(false);
   const [selectedEntry, setSelectedEntry] = React.useState<MomentEntry | null>(null);
   const [selectedImage, setSelectedImage] = React.useState<{url: string, name: string} | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   
   // Filter and view states
   const [searchQuery, setSearchQuery] = React.useState('');
   const [activeFilter, setActiveFilter] = React.useState<string | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
 
   // Fetch data from database - prioritize moments, fallback to legacy
   React.useEffect(() => {
@@ -123,24 +109,24 @@ export default function JournalPage() {
             console.log(`[Journal] Found ${moments.length} moments, using new structure`);
             console.log(`[Journal] Sample moment:`, moments[0]);
             combinedData = moments.map((moment: Record<string, any>) => ({
-              id: moment.id || '',
-              date: new Date(moment.timestamp), // Convert ISO string to Date
-              type: moment.type,
-              title: moment.title,
-              content: moment.content,
-              mood: moment.mood,
-              emotions: moment.emotions,
-              triggers: moment.triggers,
-              intensity: moment.intensity,
-              attachments: moment.attachments,
-              tags: moment.tags,
-              location: moment.location,
-              weather: moment.weather,
+              id: (moment.id as string) || '',
+              date: new Date(moment.timestamp as string), // Convert ISO string to Date
+              type: moment.type as MomentEntry['type'],
+              title: moment.title as string,
+              content: moment.content as string,
+              mood: moment.mood as number,
+              emotions: moment.emotions as string[],
+              triggers: moment.triggers as string[],
+              intensity: moment.intensity as number,
+              attachments: moment.attachments as string[],
+              tags: moment.tags as string[],
+              location: moment.location as string,
+              weather: moment.weather as string,
               // Map journal-specific data
-              entryType: moment.journalData?.entryType,
-              isDraft: moment.journalData?.isDraft,
+              entryType: moment.journalData?.entryType as 'text' | 'voice' | 'video',
+              isDraft: moment.journalData?.isDraft as boolean,
               // Map emotion-specific data
-              context: moment.emotionData?.context,
+              context: moment.emotionData?.context as string,
             }));
           }
         } catch (momentError) {
