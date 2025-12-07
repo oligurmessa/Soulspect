@@ -157,9 +157,9 @@ export default function FeaturesSection() {
                 <div className="relative flex h-full w-full flex-col overflow-hidden p-4">
                   <div className="absolute left-6 top-6 z-20 flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-400" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
                       <span className="font-medium text-[10px] text-black/60 uppercase tracking-wider dark:text-white/60">
-                        Live Intelligence
+                        Secure System
                       </span>
                     </div>
                     <h3 className="max-w-md font-semibold text-2xl text-black/80 tracking-tighter dark:text-white/80 lg:text-3xl">
@@ -175,7 +175,7 @@ export default function FeaturesSection() {
                         alt="SoulSpect concept"
                         className="h-full w-full object-cover transition-all duration-500 group-hover:scale-105 group-hover:brightness-110"
                         height={400}
-                        src="/astronot.png"
+                        src="/IMG_5606.jpeg"
                         width={400}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -199,7 +199,7 @@ export default function FeaturesSection() {
                   </div>
                 </div>
                 <p className="text-[11px] text-black/60 leading-relaxed tracking-tighter dark:text-white/60">
-                  Your personal intelligence is private, encrypted, and yours alone.
+                  Your personal intelligence is private, encrypted, and yours alone. We use only secure open weight models.
                 </p>
               </div>
             </div>
