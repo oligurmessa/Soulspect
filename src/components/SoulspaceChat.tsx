@@ -259,6 +259,32 @@ export default function SoulspaceChat({ mode, isOpen, onClose }: SoulspaceChatPr
         const messageType = detectMessageType(message);
         const cleanedContent = cleanMessage(message);
 
+        // DEMO OVERRIDE: Hardcoded response for specific prompt
+        const DEMO_PROMPT = "Why do I keep repeating the same mistakes even after promising myself I’d change?";
+        if (cleanedContent.trim() === DEMO_PROMPT) {
+            const userMessage: Message = {
+                id: `user_${Date.now()}`,
+                content: cleanedContent,
+                sender: 'user',
+                timestamp: new Date(),
+                type: messageType,
+            };
+            setMessages(prev => [...prev, userMessage]);
+            setIsTyping(true);
+
+            setTimeout(() => {
+                const aiMessage: Message = {
+                    id: `ai_${Date.now()}`,
+                    content: "Repeating a mistake isn’t a sign of weakness — it’s a sign of an unmet need. You’re not failing to change; you’re returning to something familiar, even if it hurts.\n\nThere’s usually a moment before the mistake where you feel the pull. What does that moment feel like for you?",
+                    sender: 'ai',
+                    timestamp: new Date(),
+                };
+                setMessages(prev => [...prev, aiMessage]);
+                setIsTyping(false);
+            }, 1000);
+            return;
+        }
+
         // Add user message
         const userMessage: Message = {
             id: `user_${Date.now()}`,
