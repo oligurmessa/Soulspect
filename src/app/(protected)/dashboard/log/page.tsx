@@ -572,17 +572,17 @@ export default function JournalPage() {
             =================================================================== */}
         {/* AI Chat Button */}
         {!isChatOpen && (
-          <div className="absolute bottom-24 sm:bottom-6 right-4 sm:right-6 z-40">
+          <div className="fixed lg:absolute bottom-24 sm:bottom-6 right-4 sm:right-6 z-40">
             <Button03 onToggleChat={() => setIsChatOpen(true)} />
           </div>
         )}
 
         {/* Bottom Toolbar */}
-        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
+        <div className="fixed lg:absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
           {/* Gradient backdrop for better readability over content */}
           <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-50 via-zinc-50/90 to-transparent dark:from-[#191919] dark:via-[#191919]/90 pointer-events-none" />
 
-          <div className="relative p-3 sm:p-4 max-w-7xl mx-auto">
+          <div className="relative p-3 sm:p-4 max-w-7xl mx-auto pb-[env(safe-area-inset-bottom)] sm:pb-4">
             {/* Actionbar */}
             <div className="flex justify-center pointer-events-auto">
               <Actionbar
