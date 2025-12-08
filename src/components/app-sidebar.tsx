@@ -47,7 +47,6 @@ import {
   GalleryHorizontalEnd,
   House,
   Plus,
-  ChartNoAxesColumn,
   LoaderCircle,
   Settings,
   Lock,
@@ -78,7 +77,6 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Home", href: "/dashboard", icon: House },
   { title: "Log", href: "/dashboard/log", icon: Plus },
   { title: "Moments", href: "/dashboard/journal", icon: GalleryHorizontalEnd },
-  { title: "Analytics", href: "/dashboard/analytics", icon: ChartNoAxesColumn },
   { title: "Soulspace", href: "/dashboard/soulspace", icon: GeminiSparkle },
 ]
 

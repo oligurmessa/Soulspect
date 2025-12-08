@@ -12,7 +12,6 @@ const footerLinks = [
     links: [
       { name: "Moment Capture", href: "#features" },
       { name: "AI Insights", href: "#features" },
-      { name: "Growth Analytics", href: "#features" },
       { name: "Memory Search", href: "#features" },
     ],
   },

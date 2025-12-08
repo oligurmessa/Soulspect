@@ -8,7 +8,6 @@ import {
   Home,
   FileText,
   Calendar,
-  BarChart3,
   ChevronDown,
   ChevronUp
 } from 'lucide-react'
@@ -54,13 +53,6 @@ export function MobileNavDropdown({ currentPage = "log", className }: MobileNavD
       icon: Calendar,
       href: '/dashboard/journal',
       isActive: pathname.includes('/dashboard/journal')
-    },
-    {
-      id: 'analytics',
-      title: 'Analytics',
-      icon: BarChart3,
-      href: '/dashboard/analytics',
-      isActive: pathname.includes('/dashboard/analytics')
     },
     {
       id: 'soulspace',

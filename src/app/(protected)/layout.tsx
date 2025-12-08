@@ -46,7 +46,7 @@ export default function ProtectedLayout({
   return (
     <div
       className={cn(
-        "h-screen w-screen overflow-hidden flex flex-col bg-zinc-50 dark:bg-[#191919]",
+        "h-dvh w-screen overflow-hidden flex flex-col bg-zinc-50 dark:bg-[#191919]",
         geistSans.variable,
         geistMono.variable,
         "antialiased"
