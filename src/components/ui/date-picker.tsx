@@ -80,10 +80,10 @@ export function DatePicker({
           whileTap={{ scale: 0.99 }}
           transition={ANIMATION.trigger}
           className={cn(
-            "inline-flex items-center gap-2",
-            "px-3 py-2 sm:px-3.5 sm:py-2.5",
+            "inline-flex items-center gap-1.5 sm:gap-2",
+            "px-2 py-1.5 sm:px-3.5 sm:py-2.5",
             "rounded-lg sm:rounded-xl",
-            "text-sm font-medium",
+            "text-xs sm:text-sm font-medium",
             "bg-white/80 dark:bg-neutral-900/80",
             "backdrop-blur-sm",
             "border border-neutral-200/50 dark:border-neutral-800/50",
@@ -99,9 +99,14 @@ export function DatePicker({
           )}
           aria-label={date ? format(date, "MMMM d, yyyy") : placeholder}
         >
-          <CalendarIcon className="w-4 h-4 text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
-          <span className="text-sm">
-            {date ? format(date, "MMM d, yyyy") : placeholder}
+          <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400" strokeWidth={2} />
+          <span className="text-xs sm:text-sm whitespace-nowrap">
+            {date ? (
+              <>
+                <span className="sm:hidden">{format(date, "MMM d")}</span>
+                <span className="hidden sm:inline">{format(date, "MMM d, yyyy")}</span>
+              </>
+            ) : placeholder}
           </span>
         </motion.button>
       </PopoverTrigger>

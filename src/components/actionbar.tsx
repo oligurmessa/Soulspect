@@ -228,7 +228,7 @@ export function Actionbar({
         transition={ANIMATION.smooth}
         className={cn(
           "flex items-center gap-1.5 sm:gap-2",
-          "px-2 py-1.5 sm:px-3 sm:py-2",
+          "px-3 py-2 sm:px-4 sm:py-2.5",
           "rounded-xl sm:rounded-2xl",
           "bg-white/80 dark:bg-neutral-900/80",
           "backdrop-blur-xl",
@@ -255,7 +255,7 @@ export function Actionbar({
                 aria-label={mode.ariaLabel}
                 className={cn(
                   "relative flex items-center gap-1.5 sm:gap-2",
-                  "px-2.5 py-1.5 sm:px-3 sm:py-2",
+                  "px-3 py-2 sm:px-3.5 sm:py-2.5",
                   "rounded-md sm:rounded-lg",
                   "text-xs sm:text-sm font-medium",
                   "transition-all duration-200",
@@ -272,7 +272,7 @@ export function Actionbar({
                     ]
                 )}
               >
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+                <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
                 <span className="hidden xs:inline">{mode.title}</span>
               </motion.button>
             )
@@ -296,7 +296,7 @@ export function Actionbar({
                   transition={ANIMATION.spring}
                   aria-label={action.ariaLabel}
                   className={cn(
-                    "p-1.5 sm:p-2",
+                    "p-2 sm:p-2.5",
                     "rounded-md sm:rounded-lg",
                     "text-neutral-600 dark:text-neutral-400",
                     "hover:bg-neutral-100 dark:hover:bg-neutral-800",
@@ -305,7 +305,7 @@ export function Actionbar({
                     "outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:focus-visible:ring-neutral-600"
                   )}
                 >
-                  <Icon className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
+                  <Icon className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={2} />
                 </motion.button>
               </Tooltip>
             )
@@ -321,7 +321,7 @@ export function Actionbar({
                 transition={ANIMATION.spring}
                 aria-label="Add AI reflection"
                 className={cn(
-                  "p-1.5 sm:p-2",
+                  "p-2 sm:p-2.5",
                   "rounded-md sm:rounded-lg",
                   "text-[#ff9066] dark:text-[#ff9066]",
                   "hover:bg-[#ff9066]/10 dark:hover:bg-[#ff9066]/10",
@@ -330,7 +330,7 @@ export function Actionbar({
                   "outline-none focus-visible:ring-2 focus-visible:ring-[#ff9066]"
                 )}
               >
-                <GeminiSparkle className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
+                <GeminiSparkle className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={2} />
               </motion.button>
             </Tooltip>
           )}
@@ -367,7 +367,7 @@ export function Actionbar({
               transition={ANIMATION.spring}
               aria-label="Intensify content"
               className={cn(
-                "hidden xs:flex p-1.5 sm:p-2",
+                "hidden xs:flex p-2 sm:p-2.5",
                 "rounded-md sm:rounded-lg",
                 "text-amber-600 dark:text-amber-400",
                 "hover:bg-amber-50 dark:hover:bg-amber-950/50",
@@ -376,7 +376,7 @@ export function Actionbar({
                 "outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               )}
             >
-              <Wand className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} />
+              <Wand className="w-5 h-5 sm:w-[22px] sm:h-[22px]" strokeWidth={2} />
             </motion.button>
           </Tooltip>
         </div>
@@ -399,7 +399,7 @@ export function Actionbar({
             }
             className={cn(
               "flex items-center gap-1.5 sm:gap-2",
-              "px-2.5 py-1.5 sm:px-3 sm:py-2",
+              "px-3 py-2 sm:px-3.5 sm:py-2.5",
               "rounded-lg sm:rounded-xl",
               "text-xs sm:text-sm font-medium",
               "transition-all duration-200",
@@ -412,9 +412,9 @@ export function Actionbar({
             )}
           >
             {isReflectionsCollapsed ? (
-              <ChevronsDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+              <ChevronsDown className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
             ) : (
-              <ChevronsUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" strokeWidth={2} />
+              <ChevronsUp className="w-4 h-4 sm:w-[18px] sm:h-[18px]" strokeWidth={2} />
             )}
             <span className="hidden sm:inline">
               {isReflectionsCollapsed ? "Expand" : "Collapse"}

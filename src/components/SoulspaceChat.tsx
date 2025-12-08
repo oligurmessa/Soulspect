@@ -436,7 +436,7 @@ export default function SoulspaceChat({ mode, isOpen, onClose }: SoulspaceChatPr
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
                         transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="fixed bottom-24 right-4 sm:right-6 w-[22rem] h-[32rem] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden z-50 flex flex-col"
+                        className="fixed bottom-[4.5rem] left-2 right-2 sm:left-auto sm:bottom-24 sm:right-6 h-[50vh] sm:w-[22rem] sm:h-[32rem] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden z-50 flex flex-col"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 flex-shrink-0">

@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion"
 // Components
 import { Actionbar } from "@/components/actionbar"
 import { DatePicker } from "@/components/ui/date-picker"
+import MobileNavDropdown from "@/components/MobileNavDropdown"
 import { BlockEditor } from "@/components/BlockEditor"
 import { VideoRecorder } from "@/components/VideoRecorder"
 import { AttachmentTrigger } from "@/components/AttachmentTrigger"
@@ -690,40 +691,56 @@ export default function JournalPage() {
     )
   }
   /** Compact + UI-consistent Save/Update button */
+  /** Compact + UI-consistent Save/Update button */
   const SaveButton = () => {
     const isLoading = meta.status === "saving";
     const buttonText = isEditing ? "Update" : "Done";
 
     return (
       <motion.button
-        whileHover={{ scale: isLoading ? 1 : 1.015 }}
-        whileTap={{ scale: isLoading ? 1 : 0.985 }}
+        whileHover={{ scale: isLoading ? 1 : 1.05 }}
+        whileTap={{ scale: isLoading ? 1 : 0.95 }}
         onClick={() => handleSave(false)}
         disabled={isLoading || !hasMeaningfulContent}
         className={cn(
-          "inline-flex items-center gap-1.5",
-          "px-3 py-1.5",
-          "rounded-md",
+          "inline-flex items-center justify-center gap-2",
+          "h-9 w-9 sm:w-auto sm:h-9", // Fixed circle on mobile, auto width on desktop
+          "sm:px-4", // Pill padding on desktop
+          "rounded-full", // Sleek circle/pill shape
           "text-sm font-medium",
-          "transition-all duration-150",
+          "transition-all duration-300",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 dark:focus-visible:ring-neutral-700",
 
           isLoading || !hasMeaningfulContent
-            ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
-            : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 shadow-sm"
+            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
+            : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 shadow-sm hover:shadow-md"
         )}
       >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={2} />
-            <span>Saving...</span>
-          </>
-        ) : (
-          <>
-            <Save className="w-3.5 h-3.5" strokeWidth={2} />
-            <span>{buttonText}</span>
-          </>
-        )}
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} />
+              <span className="hidden sm:inline">Saving...</span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" strokeWidth={2.5} />
+              <span className="hidden sm:inline">{buttonText}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.button>
     );
   };
@@ -789,9 +806,14 @@ export default function JournalPage() {
       {/* ===================================================================
           HEADER - Clean navigation and actions
           =================================================================== */}
-      <header className="flex-shrink-0 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm">
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4 w-full">
+      <header className="flex-shrink-0 border-b border-neutral-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm z-20">
+        <div className="px-3 py-3 sm:px-6 lg:px-8 sm:py-4">
+          <div className="flex items-center gap-2 sm:gap-4 w-full">
+            {/* Mobile Nav Trigger */}
+            <div className="lg:hidden flex-shrink-0">
+              <MobileNavDropdown currentPage="log" />
+            </div>
+
             {/* Title */}
             <div className="flex-1 min-w-0">
               <input
@@ -799,29 +821,22 @@ export default function JournalPage() {
                 placeholder="Untitled"
                 value={journal.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full text-xl sm:text-2xl font-semibold text-neutral-900 dark:text-neutral-100 
+                className="w-full text-lg sm:text-2xl font-semibold text-neutral-900 dark:text-neutral-100 
                            bg-transparent border-none outline-none placeholder:text-neutral-400 
-                           dark:placeholder:text-neutral-600"
+                           dark:placeholder:text-neutral-600 truncate"
               />
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
               <StatusIndicator />
               <DatePicker value={journal.date} onChange={handleDateChange} />
 
-              {/* Attachment Panel */}
+              {/* Attachment Panel Wrapper */}
               <div className="relative">
-                <AttachmentTrigger
-                  ref={attachmentTriggerRef}
-                  count={attachments.totalCount}
-                  isOpen={isAttachmentPanelOpen}
-                  onClick={() => setIsAttachmentPanelOpen(!isAttachmentPanelOpen)}
-                />
                 <AttachmentPanel
                   isOpen={isAttachmentPanelOpen}
                   onClose={() => setIsAttachmentPanelOpen(false)}
-                  anchorRef={attachmentTriggerRef}
                   photos={attachments.photos}
                   audio={attachments.audio}
                   video={attachments.video}
@@ -830,8 +845,49 @@ export default function JournalPage() {
                   onDeleteAudio={attachments.deleteAudio}
                   onDeleteVideo={attachments.deleteVideo}
                   onClearMood={attachments.clearMood}
-                />
+                  onAddPhoto={() => document.getElementById('photo-upload')?.click()}
+                  onAddVideo={() => document.getElementById('video-upload')?.click()}
+                  // Audio usually requires a recorder interface, omitting for now or adding later
+                  onAddAudio={() => console.log("Add audio clicked")}
+                  onAddMood={() => console.log("Add mood clicked")}
+                >
+                  <AttachmentTrigger
+                    count={attachments.totalCount}
+                    isOpen={isAttachmentPanelOpen}
+                    onClick={() => setIsAttachmentPanelOpen(!isAttachmentPanelOpen)}
+                  />
+                </AttachmentPanel>
               </div>
+
+              {/* Hidden Inputs for Attachments */}
+              <input
+                type="file"
+                id="photo-upload"
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    Array.from(e.target.files).forEach(file => attachments.addPhoto(file));
+                    e.target.value = ''; // Reset
+                  }
+                }}
+              />
+              <input
+                type="file"
+                id="video-upload"
+                className="hidden"
+                accept="video/*"
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    const file = e.target.files[0];
+                    const url = URL.createObjectURL(file);
+                    // Video duration usually needs metadata loading, passing 0 for now or handling async
+                    attachments.addVideo(url, 0, file.name);
+                    e.target.value = '';
+                  }
+                }}
+              />
 
               <SaveButton />
             </div>
@@ -846,7 +902,7 @@ export default function JournalPage() {
         {/* Text Mode */}
         {journal.mode === "text" && (
           <div className="h-full overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-48">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 sm:pb-48">
               <BlockEditor
                 value={journal.content}
                 onChange={handleContentChange}
@@ -867,7 +923,7 @@ export default function JournalPage() {
         {/* Video Mode - Contained Layout */}
         {journal.mode === "video" && (
           <div className="h-full overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-48">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 sm:pb-48">
               {/* Video recorder container */}
               <div className="aspect-video w-full max-w-3xl mx-auto rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800">
                 <VideoRecorder
@@ -888,14 +944,17 @@ export default function JournalPage() {
             =================================================================== */}
         {/* AI Chat Button */}
         {!isChatOpen && (
-          <div className="fixed bottom-6 right-4 sm:right-6 z-40">
+          <div className="absolute bottom-24 sm:bottom-6 right-4 sm:right-6 z-40">
             <Button03 onToggleChat={() => setIsChatOpen(true)} />
           </div>
         )}
 
         {/* Bottom Toolbar */}
-        <div className="absolute inset-x-0 bottom-0 z-30 pointer-events-none">
-          <div className="p-3 sm:p-4 max-w-7xl mx-auto">
+        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
+          {/* Gradient backdrop for better readability over content */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-50 via-zinc-50/90 to-transparent dark:from-[#191919] dark:via-[#191919]/90 pointer-events-none" />
+
+          <div className="relative p-3 sm:p-4 max-w-7xl mx-auto">
             {/* Actionbar */}
             <div className="flex justify-center pointer-events-auto">
               <Actionbar
