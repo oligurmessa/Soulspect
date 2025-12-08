@@ -1,6 +1,6 @@
 "use client";
 
-import AuthCard from "@/components/auth/AuthCard";
+import AuthCard from "@/components/features/auth/AuthCard";
 import Link from "next/link";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";

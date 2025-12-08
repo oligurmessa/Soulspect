@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { momentVectorService } from '@/lib/momentVectorService';
 import { Moment } from '@/lib/moments';
+import { SearchMomentsSchema } from '@/lib/validation/schemas';
 
 // Search moments using vector similarity
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    // Validate request body with Zod
+    const validatedData = SearchMomentsSchema.parse(body);
     const { 
       userId, 
       query, 
@@ -14,14 +18,7 @@ export async function POST(request: NextRequest) {
       emotions, 
       dateRange, 
       moodRange 
-    } = body;
-
-    if (!userId || !query) {
-      return NextResponse.json(
-        { success: false, error: 'userId and query are required' }, 
-        { status: 400 }
-      );
-    }
+    } = validatedData;
 
     const options: any = { topK };
     if (type) options.type = type as Moment['type'];

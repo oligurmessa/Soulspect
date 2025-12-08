@@ -51,8 +51,8 @@ export function MobileNavDropdown({ currentPage = "log", className }: MobileNavD
       id: 'moments',
       title: 'Moments',
       icon: Calendar,
-      href: '/dashboard/journal',
-      isActive: pathname.includes('/dashboard/journal')
+      href: '/dashboard/moments',
+      isActive: pathname.includes('/dashboard/moments')
     },
     {
       id: 'soulspace',

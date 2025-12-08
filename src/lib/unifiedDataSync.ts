@@ -15,7 +15,7 @@ import {
   addEmotionLog,
   getJournalEntries,
   getEmotionLogs
-} from './dbHelpers';
+} from './data/legacy/dbHelpers';
 import { 
   createMoment, 
   getMoments,
@@ -23,7 +23,7 @@ import {
   createVectorMetadata,
   getVectorMetadata,
   updateVectorMetadata 
-} from './moments';
+} from './data/client/momentsBase';
 import { Timestamp } from 'firebase/firestore';
 
 export interface SyncResult {
@@ -60,7 +60,7 @@ export class UnifiedDataSync {
     
     try {
       // 1. Save to legacy journalEntries collection
-      const { saveJournalEntryWithFiles } = await import('./dbHelpers');
+      const { saveJournalEntryWithFiles } = await import('./data/legacy/dbHelpers');
       const entryId = await saveJournalEntryWithFiles(userId, entryData, options.files);
       
       let vectorIndexed = false;

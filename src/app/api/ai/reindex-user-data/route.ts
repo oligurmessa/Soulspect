@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
 import { momentVectorService } from '@/lib/momentVectorService';
-import { getMomentsServer } from '@/lib/dbHelpersServer';
+import { getMomentsServer } from '@/lib/data/server/moments';
 import { chromaService } from '@/lib/chromaService';
 import { normalizeTimestampToMs } from '@/lib/timestampUtils';
+import { IndexUserDataSchema } from '@/lib/validation/schemas';
 
 // Reindex all user moments into ChromaDB+Qwen with full consistency checks
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { force = false } = body;
 
-    // Authenticate the request
+    // Validate request body with Zod - use auth.uid for userId
     const auth = await authenticateRequest(request, body);
     if (!auth) {
       return NextResponse.json(
@@ -20,11 +20,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const validatedData = IndexUserDataSchema.parse({ userId: auth.uid, ...body });
+    const { force = false } = validatedData;
+
     const userId = auth.uid;
     console.log(`[REINDEX] Starting full reindex for user: ${userId}`);
 
     // STEP 1: Get all moments from Firestore
-    const allMoments = await getMomentsServer(userId, 1000); // Get up to 1000 moments
+    const allMoments = await getMomentsServer(userId, { limit: 1000 }); // Get up to 1000 moments
     console.log(`[REINDEX] Found ${allMoments.length} total moments in Firestore`);
 
     // Filter moments that have content to index
@@ -169,7 +172,7 @@ export async function GET(request: NextRequest) {
     const userId = auth.uid;
 
     // Get counts of moments vs vector metadata
-    const allMoments = await getMomentsServer(userId, 1000);
+    const allMoments = await getMomentsServer(userId, { limit: 1000 });
     const indexableMoments = allMoments.filter(moment =>
       moment.content && moment.content.trim().length > 0
     );

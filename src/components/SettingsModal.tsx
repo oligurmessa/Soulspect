@@ -11,7 +11,7 @@ import {
     Shield, Database, Save, Loader2
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
-import { updateUser, getUser, exportUserData, downloadExportData } from "@/lib/dbHelpers"
+import { updateUser, getUser, exportUserData, downloadExportData } from "@/lib/data/legacy/dbHelpers"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"

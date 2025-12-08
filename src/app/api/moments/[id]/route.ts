@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateMomentServer, getMomentServer, deleteMomentServer } from '@/lib/dbHelpersServer';
+import { updateMomentServer, getMomentServer, deleteMomentServer } from '@/lib/data/server/moments';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
 import { momentVectorService } from '@/lib/momentVectorService';
 import { Moment } from '@/lib/moments';
+import { UpdateMomentSchema } from '@/lib/validation/schemas';
+import { serverTimestamp } from 'firebase/firestore';
 
 // Get a specific moment
 export async function GET(
@@ -59,7 +61,10 @@ export async function PUT(
   try {
     const params = await context.params;
     const body = await request.json();
-    const { momentData, indexForSearch = true } = body;
+
+    // Validate request body with Zod
+    const validatedData = UpdateMomentSchema.parse(body);
+    const { momentData, indexForSearch = true } = validatedData;
 
     // Authenticate the request
     const auth = await authenticateRequest(request, body);
@@ -78,19 +83,12 @@ export async function PUT(
       );
     }
 
-    if (!momentData) {
-      return NextResponse.json(
-        { error: 'Missing momentData' },
-        { status: 400 }
-      );
-    }
-
     console.log(`[API] Updating moment ${params.id} for authenticated user: ${momentData.userId}`);
 
     // Update the moment using server helpers
     await updateMomentServer(momentData.userId, params.id, {
       ...momentData,
-      updatedAt: new Date()
+      updatedAt: serverTimestamp() as any
     });
 
     // Index for vector search if requested (controlled by indexForSearch flag)

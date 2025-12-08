@@ -5,7 +5,7 @@ import { motion, AnimatePresence, MotionConfig } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ChevronDown, Shirt, Briefcase, Smartphone, Home, Layers } from "lucide-react"
-import { useClickAway } from "@/hooks/use-click-away"
+import { useClickAway } from "@/hooks/useClickAway"
 
 interface Category {
   id: string

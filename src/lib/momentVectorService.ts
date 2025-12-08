@@ -1,11 +1,11 @@
 import { vectorDb } from './vectorDbChroma';
-import { Moment, VectorMetadata } from './types';
+import { Moment, VectorMetadata } from './data/shared/types';
 import {
   getMomentsServer,
   getVectorMetadataServer,
   updateVectorMetadataServer,
   createVectorMetadataServer
-} from './moments-server';
+} from './data/server/moments';
 import { Timestamp } from 'firebase/firestore';
 import { normalizeTimestampToDate, getTimeContext, normalizeTimestampForChroma } from './timestampUtils';
 

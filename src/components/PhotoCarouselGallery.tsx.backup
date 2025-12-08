@@ -1,0 +1,538 @@
+import React, { useState } from "react";
+import { X, Image, Plus } from "lucide-react";
+import BaseCarousel from '@/components/carousel/BaseCarousel';
+
+// --- Carousel Component Implementation (based on shadcn/ui and embla-carousel) ---
+// These are the core carousel components, kept as is for reusability.
+
+// Context to share the carousel API between parent and child components
+const CarouselContext = createContext<any>(null);
+
+// Custom hook to access the carousel context
+const useCarousel = () => {
+  const context = useContext(CarouselContext);
+  if (!context) {
+    throw new Error("useCarousel must be used within a <Carousel /> component");
+  }
+  return context;
+};
+
+// Props interface for Carousel component
+interface CarouselProps {
+  orientation?: "horizontal" | "vertical";
+  opts?: any;
+  setApi?: (api: any) => void;
+  plugins?: any[];
+  className?: string;
+  children?: React.ReactNode;
+  [key: string]: any;
+}
+
+// Main Carousel container component
+const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(({
+  orientation = "horizontal",
+  opts,
+  setApi, // Optional prop to get the Embla Carousel API instance
+  plugins,
+  className,
+  children,
+  ...props
+}, ref) => {
+  // Initialize Embla Carousel
+  const [carouselRef, api] = useEmblaCarousel({
+    ...opts,
+    axis: orientation === "horizontal" ? "x" : "y", // Set axis based on orientation
+  }, plugins);
+
+  // State to track if scrolling is possible in either direction
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Callback to update scroll capabilities based on current carousel state
+  const onSelect = useCallback((api: any) => {
+    if (!api) return;
+    setCanScrollPrev(api.canScrollPrev());
+    setCanScrollNext(api.canScrollNext());
+  }, []);
+
+  // Effect to attach and detach event listeners for carousel API
+  useEffect(() => {
+    if (!api) return;
+    onSelect(api); // Initial check when API is available
+    api.on("reInit", onSelect); // Re-check on re-initialization (e.g., window resize)
+    api.on("select", onSelect); // Re-check on slide selection
+    // If setApi prop is provided, pass the API instance to the parent
+    if (setApi) {
+      setApi(api);
+    }
+    return () => {
+      api?.off("select", onSelect); // Clean up listeners on unmount
+    };
+  }, [api, onSelect, setApi]); // Dependencies for useEffect
+
+  return (
+    <CarouselContext.Provider
+      value={{
+        carouselRef,
+        api: api,
+        opts,
+        orientation,
+        scrollPrev: useCallback(() => api?.scrollPrev(), [api]), // Memoized scrollPrev function
+        scrollNext: useCallback(() => api?.scrollNext(), [api]), // Memoized scrollNext function
+        canScrollPrev,
+        canScrollNext,
+      }}
+    >
+      <div
+        ref={ref}
+        className={`relative ${className}`}
+        role="region" // ARIA role for carousel
+        aria-roledescription="carousel"
+        {...props}
+      >
+        {children}
+      </div>
+    </CarouselContext.Provider>
+  );
+});
+Carousel.displayName = "Carousel"; // Set display name for debugging
+
+// Props interfaces for Carousel sub-components
+interface CarouselContentProps {
+  className?: string;
+  children?: React.ReactNode;
+  [key: string]: any;
+}
+
+interface CarouselItemProps {
+  className?: string;
+  children?: React.ReactNode;
+  [key: string]: any;
+}
+
+interface CarouselButtonProps {
+  className?: string;
+  [key: string]: any;
+}
+
+// Carousel content area, which wraps the individual items
+const CarouselContent = React.forwardRef<HTMLDivElement, CarouselContentProps>(({ className, ...props }, ref) => {
+  const { carouselRef, orientation } = useCarousel();
+  return (
+    <div ref={carouselRef} className="overflow-hidden">
+      <div
+        ref={ref}
+        // Flex container for carousel items, adjusting for orientation
+        className={`flex ${orientation === 'horizontal' ? '' : 'flex-col'} ${className}`}
+        {...props}
+      />
+    </div>
+  );
+});
+CarouselContent.displayName = "CarouselContent";
+
+// Individual Carousel item
+const CarouselItem = React.forwardRef<HTMLDivElement, CarouselItemProps>(({ className, ...props }, ref) => {
+  const { orientation } = useCarousel();
+  return (
+    <div
+      ref={ref}
+      role="group" // ARIA role for a group of related elements
+      aria-roledescription="slide" // ARIA role for a slide within a carousel
+      // Default basis-full for small screens, overridden by responsive classes
+      className={`min-w-0 shrink-0 grow-0 basis-full ${className}`}
+      {...props}
+    />
+  );
+});
+CarouselItem.displayName = "CarouselItem";
+
+// Previous button for carousel navigation
+const CarouselPrevious = React.forwardRef<HTMLButtonElement, CarouselButtonProps>(({ className, ...props }, ref) => {
+  const { scrollPrev, canScrollPrev } = useCarousel();
+  return (
+    <button
+      ref={ref}
+      // Styling for the previous button
+      className={`absolute h-8 w-8 rounded-full flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      onClick={scrollPrev}
+      disabled={!canScrollPrev}
+      {...props}
+    >
+      <ChevronLeft className="h-4 w-4 text-gray-700" />
+      <span className="sr-only">Previous slide</span>
+    </button>
+  );
+});
+CarouselPrevious.displayName = "CarouselPrevious";
+
+// Next button for carousel navigation
+const CarouselNext = React.forwardRef<HTMLButtonElement, CarouselButtonProps>(({ className, ...props }, ref) => {
+  const { scrollNext, canScrollNext } = useCarousel();
+  return (
+    <button
+      ref={ref}
+      // Styling for the next button
+      className={`absolute h-8 w-8 rounded-full flex items-center justify-center bg-white/80 hover:bg-white border border-gray-200 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      onClick={scrollNext}
+      disabled={!canScrollNext}
+      {...props}
+    >
+      <ChevronRight className="h-4 w-4 text-gray-700" />
+      <span className="sr-only">Next slide</span>
+    </button>
+  );
+});
+CarouselNext.displayName = "CarouselNext";
+
+
+// --- Reusable GenericCarouselGallery Component ---
+
+// Define a generic Item interface to allow various data types
+export interface Item {
+  id: string | number;
+  [key: string]: any; // Allows for any other properties on the item object
+}
+
+// Define specific interfaces for demo data types
+interface Photo extends Item {
+  url: string;
+  name: string;
+}
+
+interface OtherItem extends Item {
+  value: number;
+}
+
+// Props interface for GenericCarouselGallery
+interface GenericCarouselGalleryProps<T extends Item> {
+  items: T[]; // Array of items to display
+  onRemoveItem: (id: string | number, event?: React.MouseEvent) => void; // Callback for removing an item
+  renderItemContent: (item: T) => React.ReactNode; // Function to render content inside each carousel item
+  renderDialogContent: (item: T, onRemove: (id: string | number) => void) => React.ReactNode; // Function to render content in the full-screen dialog
+  title: string; // Title for the carousel section (e.g., "Photos", "Other Items")
+  className?: string; // Optional class for the main container of the carousel gallery
+}
+
+export const GenericCarouselGallery = <T extends Item>({
+  items = [], // Default to empty array to prevent 'undefined' errors
+  onRemoveItem,
+  renderItemContent,
+  renderDialogContent,
+  title,
+  className // Apply className from props
+}: GenericCarouselGalleryProps<T>) => {
+  // State for the currently selected item in the dialog
+  const [selectedItem, setSelectedItem] = useState<T | null>(null);
+  // State to control the visibility of the item dialog
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Handler to open the item dialog
+  const openDialog = (item: T) => {
+    setSelectedItem(item); // Set the item to be displayed
+    setIsDialogOpen(true); // Open the dialog
+  };
+
+  // Handler to close the item dialog
+  const closeDialog = () => {
+    setIsDialogOpen(false); // Close the dialog
+    setSelectedItem(null); // Clear selected item
+  };
+
+  // If there are no items, render nothing for this carousel instance
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Main container for displaying the carousel and its header */}
+      <div className={`relative ${className || 'w-full'}`}> {/* Default to w-full if no className is provided */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-gray-700 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm">
+            {title} ({items.length})
+          </span>
+        </div>
+
+        <Carousel
+          opts={{ align: "start", loop: items.length > 3 }} // Loop if more than 3 items
+          className="w-full"
+        >
+          <CarouselContent className="-ml-2"> {/* Negative left margin for spacing */}
+            {items.map((item) => (
+              <CarouselItem
+                key={item.id}
+                // Responsive classes for showing multiple items with spacing
+                className="pl-2 md:basis-1/2 lg:basis-1/3"
+              >
+                <div className="cursor-pointer group p-0 m-0">
+                  <div
+                    className="relative w-full aspect-square overflow-hidden bg-gray-100 rounded-md shadow-sm border border-gray-200"
+                    onClick={() => openDialog(item)} // Open dialog on click
+                  >
+                    {renderItemContent(item)} {/* Render content via prop */}
+                    <button
+                      onClick={(e) => onRemoveItem(item.id, e)} // Use onRemoveItem prop
+                      className="absolute top-0.5 right-0.5 bg-red-500/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <X size={10} strokeWidth={3}/>
+                    </button>
+                  </div>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          {/* Show navigation buttons only if there are more than 3 items */}
+          {items.length > 3 && (
+            <>
+              <CarouselPrevious className="left-0 h-6 w-6 -translate-x-3 top-1/2 -translate-y-1/2" />
+              <CarouselNext className="right-0 h-6 w-6 translate-x-3 top-1/2 -translate-y-1/2" />
+            </>
+          )}
+        </Carousel>
+      </div>
+
+      {/* Item dialog for viewing selected item */}
+      {isDialogOpen && selectedItem && (
+        <div
+          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 animate-fade-in"
+          onClick={closeDialog} // Close dialog on overlay click
+        >
+          <div
+            className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden relative shadow-2xl animate-scale-in"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside dialog content
+          >
+            <button
+              onClick={closeDialog} // Close button for the dialog
+              className="absolute top-3 right-3 z-10 bg-black/50 text-white rounded-full p-2 hover:bg-black/70 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <div className="flex flex-col">
+              {renderDialogContent(selectedItem, onRemoveItem)} {/* Render dialog content via prop */}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adding keyframe animations for dialog */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
+        .animate-scale-in { animation: scale-in 0.2s ease-out forwards; }
+      `}</style>
+    </>
+  );
+};
+
+
+// Demo App component - not exported by default
+function DemoApp() {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [otherItems, setOtherItems] = useState<OtherItem[]>([]);
+  const photoFileInputRef = useRef<HTMLInputElement>(null); // Renamed ref for clarity
+
+  // Handler for photo file upload
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const newPhoto: Photo = {
+            id: Date.now() + Math.random(),
+            url: e.target?.result as string,
+            name: file.name
+          };
+          setPhotos(prev => [...prev, newPhoto]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    event.target.value = ''; // Reset input
+  };
+
+  // Handler to remove a photo
+  const removePhoto = (photoId: string | number) => {
+    setPhotos(prev => prev.filter(photo => photo.id !== photoId));
+  };
+
+  // Handler to add a new "other item" (placeholder number)
+  const handleAddOtherItem = () => {
+    const newItem: OtherItem = {
+      id: Date.now() + Math.random(),
+      value: otherItems.length + 1, // Simple sequential number
+    };
+    setOtherItems(prev => [...prev, newItem]);
+  };
+
+  // Handler to remove an "other item"
+  const removeOtherItem = (itemId: string | number) => {
+    setOtherItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  // Function to trigger photo file input click
+  const triggerPhotoUpload = () => {
+    photoFileInputRef.current?.click();
+  };
+
+  // --- Rendering functions for Photo Items ---
+  const renderPhotoContent = (photo: Photo) => (
+    <img
+      src={photo.url}
+      alt={photo.name}
+      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+    />
+  );
+
+  const renderPhotoDialogContent = (photo: Photo, onRemove: (id: string | number) => void) => (
+    <>
+      <div className="relative">
+        <img
+          src={photo.url}
+          alt={photo.name}
+          className="w-full max-h-[80vh] object-contain"
+        />
+      </div>
+      <div className="p-4 bg-gray-50 border-t border-gray-200">
+        <h3 className="font-medium text-gray-900 truncate">{photo.name}</h3>
+        <div className="flex space-x-2 mt-2">
+          <button
+            onClick={() => onRemove(photo.id)}
+            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  // --- Rendering functions for Other Items ---
+  const renderOtherItemContent = (item: OtherItem) => (
+    <div className="flex aspect-square items-center justify-center p-6 bg-blue-100 rounded-md">
+      <span className="text-2xl font-semibold text-blue-800">{item.value}</span>
+    </div>
+  );
+
+  const renderOtherItemDialogContent = (item: OtherItem, onRemove: (id: string | number) => void) => (
+    <>
+      <div className="p-8 bg-blue-50 text-center">
+        <span className="text-5xl font-bold text-blue-800">{item.value}</span>
+      </div>
+      <div className="p-4 bg-gray-50 border-t border-gray-200 text-center">
+        <h3 className="font-medium text-gray-900">Other Item Details</h3>
+        <p className="text-gray-600 text-sm">This is placeholder item number {item.value}.</p>
+        <div className="flex justify-center space-x-2 mt-4">
+          <button
+            onClick={() => onRemove(item.id)}
+            className="px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+          >
+            Delete Item
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Hidden file input for photo uploads */}
+      <input
+        ref={photoFileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handlePhotoUpload}
+        className="hidden"
+      />
+
+      {/* Main page content */}
+      <div className="min-h-screen bg-transparent p-8 flex flex-col items-center">
+        <div className="max-w-4xl mx-auto w-full">
+          <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Two-Carousel Demo</h1>
+          <div className="bg-white/50 backdrop-blur-sm rounded-lg shadow-sm p-6 border mb-8">
+            <p className="text-gray-700 mb-4">
+              This demo features two distinct carousels: one for photos (bottom) and one for
+              "other items" (top), demonstrating the reusability of the `GenericCarouselGallery` component.
+            </p>
+            <ul className="space-y-2 text-sm text-gray-600 list-disc list-inside mb-6">
+              <li>Use the buttons below to add items to each carousel.</li>
+              <li>Each carousel will only appear when it contains items.</li>
+              <li>Click on any item to view its details in a full-screen dialog.</li>
+              <li>Remove items using the 'X' button on hover or the "Delete" button in the dialog.</li>
+              <li>Navigation arrows appear when a carousel has more than 3 items.</li>
+              <li>Carousels display 1 item on small screens, 2 on medium, and 3 on large screens.</li>
+            </ul>
+
+            {/* Action buttons */}
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={triggerPhotoUpload}
+                className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md text-base font-medium hover:bg-green-700 transition-colors shadow-lg"
+              >
+                <Plus size={20} className="mr-2" />
+                <span>Add New Photo</span>
+              </button>
+              <button
+                onClick={handleAddOtherItem}
+                className="flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md text-base font-medium hover:bg-purple-700 transition-colors shadow-lg"
+              >
+                <Plus size={20} className="mr-2" />
+                <span>Add Other Item</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Fixed container for stacked carousels in the bottom-left corner */}
+        <div className="fixed bottom-4 left-4 z-50 w-[240px] flex flex-col space-y-4">
+          {/* Other Items Carousel (on top) */}
+          <GenericCarouselGallery
+            items={otherItems}
+            onRemoveItem={removeOtherItem}
+            renderItemContent={renderOtherItemContent}
+            renderDialogContent={renderOtherItemDialogContent}
+            title="Other Items"
+            className="w-full" /* Ensure it takes full width of its fixed parent */
+          />
+
+          {/* Photo Carousel (below) */}
+          <GenericCarouselGallery
+            items={photos}
+            onRemoveItem={removePhoto}
+            renderItemContent={renderPhotoContent}
+            renderDialogContent={renderPhotoDialogContent}
+            title="Photos"
+            className="w-full" /* Ensure it takes full width of its fixed parent */
+          />
+        </div>
+      </div>
+
+      {/* Adding keyframe animations for dialog (can be moved to a global CSS file if preferred) */}
+      <style>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scale-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
+        .animate-scale-in { animation: scale-in 0.2s ease-out forwards; }
+      `}</style>
+    </>
+  );
+}
+
+// Export GenericCarouselGallery as the default export
+export default GenericCarouselGallery;

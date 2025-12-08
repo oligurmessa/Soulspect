@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { enhancedAI } from '@/lib/enhancedAi';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
+import { EnhancedChatSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, query, mode = 'normal', source = 'inline_insight' } = body;
+    
+    // Validate request body with Zod
+    const validatedData = EnhancedChatSchema.parse(body);
+    const { userId, query, mode = 'normal', source = 'inline_insight' } = validatedData;
 
     // Authenticate the request
     const auth = await authenticateRequest(request, body);
@@ -31,9 +35,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[API] Enhanced response request - User: ${userId}, Source: ${source}, Mode: ${mode}, Stream: ${body.stream}`);
+    console.log(`[API] Enhanced response request - User: ${userId}, Source: ${source}, Mode: ${mode}, Stream: ${validatedData.stream}`);
 
-    if (body.stream) {
+    if (validatedData.stream) {
       const streamResponse = await enhancedAI.generateEnhancedResponseStream({
         userId,
         currentQuery: query,

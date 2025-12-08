@@ -1,12 +1,17 @@
+/**
+ * NOTE: This file was flagged as LEGACY / AMBIGUOUS by static analysis.
+ * It contains migration logic that may be useful for operations but appears unused in the active application flow.
+ * Recommended Action: Review for archival or deletion if no longer needed.
+ */
 import { Timestamp } from "firebase/firestore";
-import { 
-  getJournalEntries, 
-  getEmotionLogs, 
+import {
+  getJournalEntries,
+  getEmotionLogs,
   JournalEntry,
   EmotionLog
-} from "./dbHelpers";
-import { 
-  createMoment, 
+} from "./data/legacy/dbHelpers";
+import {
+  createMoment,
   createVectorMetadata,
   Moment,
   VectorMetadata
@@ -29,15 +34,15 @@ export type MigrationCallback = (progress: MigrationProgress) => void;
 export const convertJournalEntryToMoment = (entry: JournalEntry): Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> => {
   // Determine content - combine title and content
   const content = entry.title ? `${entry.title}\n\n${entry.content}` : entry.content;
-  
+
   // Extract basic emotional data
   const mood = entry.mood;
   const emotions = entry.emotions || [];
-  
+
   // Process carousel content for attachments
   const attachments: string[] = [];
   let additionalContent = content;
-  
+
   if (entry.carouselContent) {
     // Add photo information to content
     if (entry.carouselContent.photos?.length > 0) {
@@ -45,13 +50,13 @@ export const convertJournalEntryToMoment = (entry: JournalEntry): Omit<Moment, '
         .map(photo => `Photo: ${photo.caption || photo.name}`)
         .join('\n');
       additionalContent += '\n\nPhotos:\n' + photoDescriptions;
-      
+
       // Add photo URLs to attachments
       entry.carouselContent.photos.forEach(photo => {
         if (photo.url) attachments.push(photo.url);
       });
     }
-    
+
     // Add emotion logs to content
     if (entry.carouselContent.emotions?.length > 0) {
       const emotionDescriptions = entry.carouselContent.emotions
@@ -59,26 +64,26 @@ export const convertJournalEntryToMoment = (entry: JournalEntry): Omit<Moment, '
         .join('\n');
       additionalContent += '\n\nEmotion Logs:\n' + emotionDescriptions;
     }
-    
+
     // Add audio recordings to content
     if (entry.carouselContent.audioRecordings?.length > 0) {
       const audioDescriptions = entry.carouselContent.audioRecordings
         .map(audio => `Audio: ${audio.transcript} (${audio.duration}s)`)
         .join('\n');
       additionalContent += '\n\nAudio Recordings:\n' + audioDescriptions;
-      
+
       // Add audio URLs to attachments
       entry.carouselContent.audioRecordings.forEach(audio => {
         if (audio.audioUrl) attachments.push(audio.audioUrl);
       });
     }
   }
-  
+
   // Add existing attachments
   if (entry.attachments) {
     attachments.push(...entry.attachments);
   }
-  
+
   const moment: Omit<Moment, 'id' | 'createdAt' | 'updatedAt'> = {
     userId: entry.userId,
     type: 'journal',
@@ -95,7 +100,7 @@ export const convertJournalEntryToMoment = (entry: JournalEntry): Omit<Moment, '
       wordCount: additionalContent.split(' ').length,
     },
   };
-  
+
   return moment;
 };
 
@@ -120,7 +125,7 @@ ${log.intensity ? `Intensity: ${log.intensity}/10` : ''}`;
       context: log.context,
     },
   };
-  
+
   return moment;
 };
 
@@ -136,19 +141,19 @@ export const migrateUserData = async (
 }> => {
   const errors: string[] = [];
   let totalMigrated = 0;
-  
+
   try {
     // Get all existing data
     console.log('Fetching existing data for migration...');
-    
+
     const [journalEntries, emotionLogs] = await Promise.all([
       getJournalEntries(userId, 1000),
       getEmotionLogs(userId, 1000),
     ]);
-    
+
     const totalItems = journalEntries.length + emotionLogs.length;
     let completed = 0;
-    
+
     const updateProgress = (currentType: string) => {
       if (onProgress) {
         onProgress({
@@ -160,16 +165,16 @@ export const migrateUserData = async (
         });
       }
     };
-    
+
     // Migrate journal entries
     console.log(`Migrating ${journalEntries.length} journal entries...`);
     updateProgress('journal entries');
-    
+
     for (const entry of journalEntries) {
       try {
         const moment = convertJournalEntryToMoment(entry);
         const momentId = await createMoment(moment);
-        
+
         // Create vector metadata entry
         await createVectorMetadata({
           userId,
@@ -193,7 +198,7 @@ export const migrateUserData = async (
             season: getSeason(moment.timestamp.toDate()),
           },
         });
-        
+
         totalMigrated++;
         completed++;
       } catch (error) {
@@ -201,16 +206,16 @@ export const migrateUserData = async (
         completed++;
       }
     }
-    
+
     // Migrate emotion logs
     console.log(`Migrating ${emotionLogs.length} emotion logs...`);
     updateProgress('emotion logs');
-    
+
     for (const log of emotionLogs) {
       try {
         const moment = convertEmotionLogToMoment(log);
         const momentId = await createMoment(moment);
-        
+
         // Create vector metadata entry
         await createVectorMetadata({
           userId,
@@ -234,7 +239,7 @@ export const migrateUserData = async (
             season: getSeason(moment.timestamp.toDate()),
           },
         });
-        
+
         totalMigrated++;
         completed++;
       } catch (error) {
@@ -242,7 +247,7 @@ export const migrateUserData = async (
         completed++;
       }
     }
-    
+
     // Final progress update
     if (onProgress) {
       onProgress({
@@ -253,18 +258,18 @@ export const migrateUserData = async (
         status: 'completed',
       });
     }
-    
+
     console.log(`Migration completed: ${totalMigrated} items migrated, ${errors.length} errors`);
-    
+
     return {
       success: errors.length < totalItems / 2, // Success if less than 50% errors
       totalMigrated,
       errors,
     };
-    
+
   } catch (error) {
     console.error('Migration failed:', error);
-    
+
     if (onProgress) {
       onProgress({
         total: 0,
@@ -274,7 +279,7 @@ export const migrateUserData = async (
         status: 'failed',
       });
     }
-    
+
     return {
       success: false,
       totalMigrated,

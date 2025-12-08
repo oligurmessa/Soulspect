@@ -4,7 +4,7 @@ import { CornerRightUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useAutoResizeTextarea } from "@/components/hooks/use-auto-resize-textarea";
+import { useAutoResizeTextarea } from "@/hooks/useAutoResizeTextarea";
 
 interface AIInputWithLoadingProps {
   id?: string;
@@ -41,7 +41,6 @@ export function AIInputWithLoading({
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight,
     maxHeight,
-    growDirection,
   });
 
   useEffect(() => {

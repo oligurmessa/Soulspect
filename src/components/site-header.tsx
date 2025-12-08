@@ -5,7 +5,7 @@ import { UserProfile } from "@/components/user-profile";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import MobileNavDropdown from "@/components/MobileNavDropdown";
 import { cn } from "@/lib/utils";
-import { ChatHistory } from "@/components/ChatHistory";
+import { ChatHistory } from "@/components/features/chat/ChatHistory";
 
 const formatTitle = (pathname: string): string => {
   if (pathname === "/dashboard") return "Dashboard";
@@ -42,7 +42,7 @@ export function SiteHeader() {
   // Also hide on Moments page if it has its own header (based on dashboard/moments/page.tsx having one)
   // But user asked to make other pages "similar to moments", so maybe we SHOULD show this header and remove the one in page?
   // For now, let's style THIS header to match.
-  if (isLogPage) {
+  if (isLogPage || isMomentsPage) {
     return null;
   }
 

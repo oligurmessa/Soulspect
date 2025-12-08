@@ -24,81 +24,37 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Timestamp } from "firebase/firestore"
 import { toast } from "sonner"
 import { Save, Check, Loader2, AlertCircle } from "lucide-react"
-import { PageLoader } from "@/components/PageLoader"
+import { PageLoader } from "@/components/shared/PageLoader"
 import { motion, AnimatePresence } from "framer-motion"
 
 // Components
-import { Actionbar } from "@/components/actionbar"
+import { Actionbar } from "@/components/features/journal/ActionBar"
 import { DatePicker } from "@/components/ui/date-picker"
 import MobileNavDropdown from "@/components/MobileNavDropdown"
-import { BlockEditor } from "@/components/BlockEditor"
-import { VideoRecorder } from "@/components/VideoRecorder"
-import { AttachmentTrigger } from "@/components/AttachmentTrigger"
-import { AttachmentPanel } from "@/components/AttachmentPanel"
+import { BlockEditor } from "@/components/features/journal/BlockEditor"
+import { VideoRecorder } from "@/components/features/journal/VideoRecorder"
+import { AttachmentTrigger } from "@/components/features/journal/AttachmentTrigger"
+import { AttachmentPanel } from "@/components/features/journal/AttachmentPanel"
 import Button03 from "@/components/AIButton"
-import FloatingChatPane from "@/components/FloatingChatPane"
+import FloatingChatPane from "@/components/features/chat/FloatingChatPane"
 
 // Services & Utilities
 import { reflectionService } from "@/lib/reflectionService"
 import { useAuth } from "@/context/AuthContext"
-import { uploadImageFile, uploadJournalFile } from "@/lib/dbHelpers"
-import { MomentClient, updateUnifiedMoment } from "@/lib/momentClient"
-import { Moment } from "@/lib/moments"
+import { uploadImageFile, uploadJournalFile } from "@/lib/data/legacy/dbHelpers"
+import { MomentClient, updateUnifiedMoment } from "@/lib/data/client/moments"
+import { Moment } from "@/lib/data/shared/types"
 import { useAttachments } from "@/hooks/useAttachments"
 import { cn } from "@/lib/utils"
+import { AUTOSAVE_DELAY_MS, LOCALSTORAGE_BACKUP_DELAY_MS } from "@/config/constants"
 
-// =============================================================================
-// TYPE DEFINITIONS
-// =============================================================================
-
-interface JournalState {
-  id?: string
-  title: string
-  content: string
-  date: Date
-  mode: "text" | "video"
-  attachments: string[]
-  emotions: string[]
-  triggers: string[]
-  videoUrl?: string
-  isDraft: boolean
-  updatedAt?: Date
-  mood?: number
-}
-
-interface MetaState {
-  status: "idle" | "editing" | "saving" | "saved" | "error"
-  dirty: boolean
-  loadingState: "idle" | "loading" | "loaded" | "error"
-  loadingError?: string
-  isSaving: boolean
-}
-
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const AUTOSAVE_DELAY_MS = 1500
-const LOCALSTORAGE_BACKUP_DELAY_MS = 2000
-
-const INITIAL_JOURNAL_STATE: JournalState = {
-  title: "",
-  content: "",
-  date: new Date(),
-  mode: "text",
-  attachments: [],
-  emotions: [],
-  triggers: [],
-  isDraft: true,
-}
-
-const INITIAL_META_STATE: MetaState = {
-  status: "idle",
-  dirty: false,
-  loadingState: "idle",
-  isSaving: false,
-}
+// Type imports
+import { JournalState, MetaState, INITIAL_JOURNAL_STATE, INITIAL_META_STATE } from "./types"
+import { useJournalState } from "./hooks/useJournalState"
+import { useAutoSave } from "./hooks/useAutoSave"
+import { StatusIndicator } from "./components/StatusIndicator"
+import { SaveButton } from "./components/SaveButton"
+import { createJournalDoc, updateJournalDoc, loadEntry as loadEntryUtil, saveToLocalStorage, clearFromLocalStorage } from "./utils/persistence"
 
 // =============================================================================
 // MAIN COMPONENT
@@ -124,9 +80,19 @@ export default function JournalPage() {
   // ---------------------------------------------------------------------------
   // State
   // ---------------------------------------------------------------------------
-  const [journal, setJournal] = useState<JournalState>(INITIAL_JOURNAL_STATE)
-  const [meta, setMeta] = useState<MetaState>(INITIAL_META_STATE)
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null)
+  const {
+    journal,
+    setJournal,
+    meta,
+    setMeta,
+    videoBlob,
+    setVideoBlob,
+    updateJournal,
+    hasMeaningfulContent,
+    isEditing,
+    resetJournal,
+  } = useJournalState()
+  
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [hasReflections, setHasReflections] = useState(false)
   const [areReflectionsCollapsed, setAreReflectionsCollapsed] = useState(false)
@@ -134,35 +100,6 @@ export default function JournalPage() {
 
   // Attachment management
   const attachments = useAttachments()
-
-  // ---------------------------------------------------------------------------
-  // Derived State
-  // ---------------------------------------------------------------------------
-
-  const hasMeaningfulContent = useMemo(() => {
-    return (
-      journal.title.trim().length > 0 ||
-      journal.content.trim().length > 0 ||
-      journal.attachments.length > 0 ||
-      journal.emotions.length > 0 ||
-      videoBlob !== null
-    )
-  }, [journal.title, journal.content, journal.attachments, journal.emotions, videoBlob])
-
-  const isEditing = useMemo(() => Boolean(journal.id), [journal.id])
-
-  // ---------------------------------------------------------------------------
-  // State Update Helpers
-  // ---------------------------------------------------------------------------
-
-  const updateJournal = useCallback((updates: Partial<JournalState>) => {
-    setJournal(prev => ({ ...prev, ...updates }))
-    setMeta(prev => ({
-      ...prev,
-      dirty: !prev.isSaving,
-      status: prev.isSaving ? prev.status : "editing",
-    }))
-  }, [])
 
 
   // ---------------------------------------------------------------------------
@@ -200,105 +137,6 @@ export default function JournalPage() {
     })
   }, [updateJournal, journal.triggers, journal.mood])
 
-  // ---------------------------------------------------------------------------
-  // Persistence Functions
-  // ---------------------------------------------------------------------------
-
-  const createJournalDoc = async (journalState: JournalState): Promise<JournalState> => {
-    if (!user) throw new Error("User not authenticated")
-
-    // Collect all attachments from the attachments hook
-    const allAttachments = [
-      ...attachments.photos.filter(p => !p.url.startsWith('blob:')).map(p => p.url),
-      ...attachments.audio.map(a => a.audioUrl),
-      ...attachments.video.map(v => v.videoUrl),
-    ]
-
-    const hasVideo = videoBlob || allAttachments.some(
-      url => url.includes("video_") || /\.(mp4|webm|mov|avi)$/.test(url)
-    )
-
-    const momentData: Omit<Moment, "id" | "createdAt" | "updatedAt"> = {
-      userId: user.uid,
-      type: "journal",
-      title: journalState.title || "Untitled",
-      content: journalState.content || "",
-      timestamp: Timestamp.fromDate(journalState.date),
-      mood: attachments.mood?.intensity,
-      emotions: attachments.mood?.emotions,
-      triggers: attachments.mood?.triggers,
-      attachments: allAttachments.length > 0 ? allAttachments : undefined,
-      journalData: {
-        entryType: hasVideo ? "video" : "text",
-        isDraft: journalState.isDraft,
-      },
-    }
-
-    if (videoBlob) {
-      const tempId = `temp_${Date.now()}`
-      const videoUrl = await uploadJournalFile(user.uid, videoBlob, tempId, "video")
-      momentData.attachments = [...(momentData.attachments || []), videoUrl]
-      // Add video to attachments hook for future reference
-      attachments.addVideo(videoUrl, 0, "Video recording")
-    }
-
-    const momentId = await MomentClient.createMoment(momentData, !journalState.isDraft)
-
-    return {
-      ...journalState,
-      id: momentId,
-      updatedAt: new Date(),
-    }
-  }
-
-  const updateJournalDoc = async (journalState: JournalState, isAutosave = false): Promise<JournalState> => {
-    if (!user || !journalState.id) {
-      throw new Error("User not authenticated or missing journal ID")
-    }
-
-    // Collect all attachments from the attachments hook
-    const allAttachments = [
-      ...attachments.photos.filter(p => !p.url.startsWith('blob:')).map(p => p.url),
-      ...attachments.audio.map(a => a.audioUrl),
-      ...attachments.video.map(v => v.videoUrl),
-    ]
-
-    const hasVideo = videoBlob || allAttachments.some(
-      url => url.includes("video_") || /\.(mp4|webm|mov|avi)$/.test(url)
-    )
-
-    const momentData: Omit<Moment, "id" | "createdAt" | "updatedAt"> = {
-      userId: user.uid,
-      type: "journal",
-      title: journalState.title || "Untitled",
-      content: journalState.content || "",
-      timestamp: Timestamp.fromDate(journalState.date),
-      mood: attachments.mood?.intensity,
-      emotions: attachments.mood?.emotions,
-      triggers: attachments.mood?.triggers,
-      attachments: allAttachments.length > 0 ? allAttachments : undefined,
-      journalData: {
-        entryType: hasVideo ? "video" : "text",
-        isDraft: journalState.isDraft,
-      },
-    }
-
-    if (videoBlob && !allAttachments.some(url => url.includes("video_"))) {
-      const videoUrl = await uploadJournalFile(user.uid, videoBlob, journalState.id, "video")
-      momentData.attachments = [...(momentData.attachments || []), videoUrl]
-      // Add video to attachments hook for future reference
-      attachments.addVideo(videoUrl, 0, "Video recording")
-    }
-
-    // OPTIMIZATION: Never index on autosave. Only index on manual save/update if not draft.
-    const shouldIndex = isAutosave ? false : !journalState.isDraft;
-    await updateUnifiedMoment(journalState.id, user.uid, momentData, shouldIndex)
-
-    return {
-      ...journalState,
-      updatedAt: new Date(),
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // Entry Loading
@@ -313,43 +151,13 @@ export default function JournalPage() {
     try {
       setMeta(prev => ({ ...prev, loadingState: "loading", loadingError: undefined }))
 
-      const moment = await MomentClient.getMoment(entryId, user.uid)
-
-      if (!moment) {
-        setMeta(prev => ({ ...prev, loadingError: "Entry not found", loadingState: "error" }))
-        toast.error("Entry not found")
-        return
-      }
-
-      const loadedJournal: JournalState = {
-        id: moment.id!,
-        title: moment.title || "",
-        content: moment.content || "",
-        date: moment.timestamp?.toDate?.() || new Date(),
-        mode: moment.journalData?.entryType === "video" ? "video" : "text",
-        attachments: moment.attachments || [],
-        emotions: moment.emotions || [],
-        triggers: moment.triggers || [],
-        videoUrl: moment.attachments?.find((url: string) => url.includes("video_")),
-        isDraft: moment.journalData?.isDraft !== false,
-        updatedAt: moment.updatedAt?.toDate?.() || new Date(),
-        mood: moment.mood,
-      }
+      const { journal: loadedJournal, videoBlob: loadedVideoBlob, moment } = await loadEntryUtil(entryId, user.uid)
 
       setJournal(loadedJournal)
+      setVideoBlob(loadedVideoBlob)
 
       // Load attachments into the hook
       attachments.loadFromMoment(moment)
-
-      if (loadedJournal.mode === "video" && loadedJournal.videoUrl) {
-        try {
-          const response = await fetch(loadedJournal.videoUrl)
-          const blob = await response.blob()
-          setVideoBlob(blob)
-        } catch (error) {
-          console.error("Error loading video file:", error)
-        }
-      }
 
       setMeta(prev => ({
         ...prev,
@@ -391,69 +199,17 @@ export default function JournalPage() {
   }, [searchParams])
 
 
-  // Autosave effect
-  useEffect(() => {
-    if (!meta.dirty || meta.isSaving || !hasMeaningfulContent || !user || meta.loadingState !== "loaded") {
-      return
-    }
-
-    if (meta.status === "idle" || meta.status === "saved") {
-      setMeta(prev => ({ ...prev, status: "editing" }))
-    }
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        setMeta(prev => ({ ...prev, status: "saving", isSaving: true }))
-
-        let updatedJournal: JournalState
-
-        if (!journal.id) {
-          updatedJournal = await createJournalDoc(journal)
-          setJournal(prev => ({ ...prev, id: updatedJournal.id, updatedAt: updatedJournal.updatedAt }))
-        } else {
-          // Pass true for isAutosave to skip indexing
-          updatedJournal = await updateJournalDoc(journal, true)
-          setJournal(prev => ({ ...prev, updatedAt: updatedJournal.updatedAt }))
-        }
-
-        setMeta(prev => ({ ...prev, dirty: false, status: "saved", isSaving: false }))
-      } catch (error) {
-        console.error("Autosave failed:", error)
-        setMeta(prev => ({ ...prev, status: "error", isSaving: false }))
-      }
-    }, AUTOSAVE_DELAY_MS)
-
-    return () => clearTimeout(timeoutId)
-  }, [meta.dirty, meta.isSaving, meta.status, meta.loadingState, user, hasMeaningfulContent, journal.id])
-
-  // LocalStorage backup
-  useEffect(() => {
-    if (!hasMeaningfulContent) return
-
-    const timeoutId = setTimeout(() => {
-      try {
-        const key = journal.id ? `journal:${journal.id}` : "journal:new"
-        localStorage.setItem(key, JSON.stringify({ ...journal, backedUpAt: new Date().toISOString() }))
-      } catch (error) {
-        console.error("Failed to backup to localStorage:", error)
-      }
-    }, LOCALSTORAGE_BACKUP_DELAY_MS)
-
-    return () => clearTimeout(timeoutId)
-  }, [journal, hasMeaningfulContent])
-
-  // Navigation safety
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (meta.dirty) {
-        e.preventDefault()
-        e.returnValue = ""
-      }
-    }
-
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [meta.dirty])
+  // Use the autosave hook
+  useAutoSave({
+    journal,
+    meta,
+    videoBlob,
+    userId: user?.uid,
+    hasMeaningfulContent,
+    setJournal,
+    setMeta,
+    attachments
+  })
 
   // Cleanup
   useEffect(() => {
@@ -587,22 +343,20 @@ export default function JournalPage() {
       let savedJournal: JournalState
 
       if (!journal.id) {
-        savedJournal = await createJournalDoc(journalToSave)
+        savedJournal = await createJournalDoc(journalToSave, user.uid, videoBlob, attachments)
       } else {
-        savedJournal = await updateJournalDoc(journalToSave)
+        savedJournal = await updateJournalDoc(journalToSave, user.uid, videoBlob, attachments, false)
       }
 
       setJournal(savedJournal)
 
-      const key = savedJournal.id ? `journal:${savedJournal.id}` : "journal:new"
-      localStorage.removeItem(key)
+      clearFromLocalStorage(savedJournal)
 
       setMeta(prev => ({ ...prev, dirty: false, status: "saved", isSaving: false }))
       toast.success(asDraft ? "Draft saved!" : "Entry published!")
 
       if (!asDraft) {
-        setJournal(INITIAL_JOURNAL_STATE)
-        setVideoBlob(null)
+        resetJournal()
         attachments.clearAll()
         router.replace("/dashboard/journal")
       }
@@ -613,137 +367,6 @@ export default function JournalPage() {
     }
   }, [user, hasMeaningfulContent, journal, router])
 
-  // ---------------------------------------------------------------------------
-  // UI Components
-  // ---------------------------------------------------------------------------
-
-  /** Status indicator - Minimal, stable, and smart */
-  const StatusIndicator = () => {
-    // We render a fixed-width container to prevent layout shifts
-    return (
-      <div className="flex items-center justify-center w-6 h-6 mr-1">
-        <AnimatePresence mode="wait">
-          {meta.status === "saving" && (
-            <motion.div
-              key="saving"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-            >
-              <Loader2 className="w-4 h-4 text-neutral-400 animate-spin" />
-            </motion.div>
-          )}
-
-          {meta.status === "editing" && (
-            <motion.div
-              key="editing"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-            >
-              <motion.div
-                className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.7, 1, 0.7],
-                  boxShadow: [
-                    "0 0 8px rgba(251,191,36,0.5)",
-                    "0 0 16px rgba(251,191,36,0.8)",
-                    "0 0 8px rgba(251,191,36,0.5)"
-                  ]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-            </motion.div>
-          )}
-
-          {meta.status === "saved" && (
-            <motion.div
-              key="saved"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5, transition: { delay: 2 } }} // Fade out after 2s
-              onAnimationComplete={() => {
-                // Optional: We could set status to idle here if we had access to the setter in a clean way,
-                // but visual fade out is sufficient for the user's request.
-              }}
-            >
-              <Check className="w-4 h-4 text-emerald-500/80" strokeWidth={2.5} />
-            </motion.div>
-          )}
-
-          {meta.status === "error" && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-            >
-              <AlertCircle className="w-4 h-4 text-red-500" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    )
-  }
-  /** Compact + UI-consistent Save/Update button */
-  /** Compact + UI-consistent Save/Update button */
-  const SaveButton = () => {
-    const isLoading = meta.status === "saving";
-    const buttonText = isEditing ? "Update" : "Done";
-
-    return (
-      <motion.button
-        whileHover={{ scale: isLoading ? 1 : 1.05 }}
-        whileTap={{ scale: isLoading ? 1 : 0.95 }}
-        onClick={() => handleSave(false)}
-        disabled={isLoading || !hasMeaningfulContent}
-        className={cn(
-          "inline-flex items-center justify-center gap-2",
-          "h-9 w-9 sm:w-auto sm:h-9", // Fixed circle on mobile, auto width on desktop
-          "sm:px-4", // Pill padding on desktop
-          "rounded-full", // Sleek circle/pill shape
-          "text-sm font-medium",
-          "transition-all duration-300",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300 dark:focus-visible:ring-neutral-700",
-
-          isLoading || !hasMeaningfulContent
-            ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed"
-            : "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 shadow-sm hover:shadow-md"
-        )}
-      >
-        <AnimatePresence mode="wait">
-          {isLoading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.5} />
-              <span className="hidden sm:inline">Saving...</span>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="idle"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" strokeWidth={2.5} />
-              <span className="hidden sm:inline">{buttonText}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
-    );
-  };
 
   // ---------------------------------------------------------------------------
   // Loading State
@@ -829,7 +452,7 @@ export default function JournalPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-              <StatusIndicator />
+              <StatusIndicator meta={meta} />
               <DatePicker value={journal.date} onChange={handleDateChange} />
 
               {/* Attachment Panel Wrapper */}
@@ -889,7 +512,12 @@ export default function JournalPage() {
                 }}
               />
 
-              <SaveButton />
+              <SaveButton 
+                isEditing={isEditing}
+                meta={meta}
+                hasMeaningfulContent={hasMeaningfulContent}
+                onClick={() => handleSave(false)}
+              />
             </div>
           </div>
         </div>

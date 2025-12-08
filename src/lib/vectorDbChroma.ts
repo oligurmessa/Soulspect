@@ -1,6 +1,6 @@
 // New ChromaDB-based vector database service replacing Pinecone
 import { chromaService } from './chromaService';
-import { EmotionLog, JournalEntry, Moment } from './types';
+import { EmotionLog, JournalEntry, Moment } from './data/shared/types';
 import { normalizeTimestampForChroma } from './timestampUtils';
 
 // Legacy compatibility interfaces

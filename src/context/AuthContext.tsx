@@ -20,7 +20,7 @@ import {
   browserSessionPersistence
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { createUser, getUser, updateUser } from "@/lib/dbHelpers";
+import { createUser, getUser, updateUser } from "@/lib/data/legacy/dbHelpers";
 
 interface AuthContextType {
   user: User | null;

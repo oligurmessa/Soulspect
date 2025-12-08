@@ -6,7 +6,7 @@ import { useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
-import { LoadingSpinner } from "@/components/LoadingSpinner"
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner"
 import { Geist, Geist_Mono } from "next/font/google"
 import { cn } from "@/lib/utils"
 import { NuqsAdapter } from "nuqs/adapters/next/app";

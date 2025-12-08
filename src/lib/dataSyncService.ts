@@ -1,9 +1,9 @@
 // DISABLED: Pinecone vectorDb import removed
-import { 
-  EmotionLog, 
-  JournalEntry, 
-  SoulspaceItem 
-} from './dbHelpers';
+import {
+  EmotionLog,
+  JournalEntry,
+  SoulspaceItem
+} from './data/legacy/dbHelpers';
 
 /**
  * Data sync service to automatically index new data in vector database
@@ -13,7 +13,7 @@ export class DataSyncService {
   // Index a new journal entry
   static async indexJournalEntry(userId: string, entry: JournalEntry): Promise<void> {
     if (!entry.id || !entry.content) return;
-    
+
     try {
       // DISABLED: Pinecone indexing removed
       console.log('DataSync indexing disabled - Pinecone removed');
@@ -26,7 +26,7 @@ export class DataSyncService {
   // Index a new emotion log
   static async indexEmotionLog(userId: string, log: EmotionLog): Promise<void> {
     if (!log.id) return;
-    
+
     try {
       // DISABLED: Pinecone indexing removed
       console.log('DataSync indexing disabled - Pinecone removed');
@@ -38,13 +38,13 @@ export class DataSyncService {
 
   // Index voice transcript
   static async indexVoiceTranscript(
-    userId: string, 
-    entryId: string, 
-    transcript: string, 
+    userId: string,
+    entryId: string,
+    transcript: string,
     duration: number
   ): Promise<void> {
     if (!transcript) return;
-    
+
     try {
       const voiceData = {
         transcript,
@@ -52,7 +52,7 @@ export class DataSyncService {
         entryId,
         createdAt: Date.now(),
       };
-      
+
       // DISABLED: Pinecone indexing removed
       console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed voice transcript: ${entryId}`);
@@ -63,13 +63,13 @@ export class DataSyncService {
 
   // Index photo with caption
   static async indexPhoto(
-    userId: string, 
-    photoId: string, 
-    caption: string, 
+    userId: string,
+    photoId: string,
+    caption: string,
     name: string
   ): Promise<void> {
     if (!caption) return;
-    
+
     try {
       const photoData = {
         caption,
@@ -77,7 +77,7 @@ export class DataSyncService {
         photoId,
         createdAt: Date.now(),
       };
-      
+
       // DISABLED: Pinecone indexing removed
       console.log('DataSync indexing disabled - Pinecone removed');
       console.log(`Indexed photo: ${photoId}`);
@@ -86,10 +86,10 @@ export class DataSyncService {
     }
   }
 
-// Index soulspace item
+  // Index soulspace item
   static async indexSoulspaceItem(userId: string, item: SoulspaceItem): Promise<void> {
     if (!item.id || !item.content) return;
-    
+
     try {
       // DISABLED: Pinecone indexing removed
       console.log('DataSync indexing disabled - Pinecone removed');

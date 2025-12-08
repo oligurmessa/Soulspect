@@ -1,18 +1,20 @@
+/**
+ * NOTE: This file was flagged as LEGACY / AMBIGUOUS by static analysis.
+ * It serves as an endpoint for data migration which may be a one-off operational task.
+ * Recommended Action: Review usage and verify if this endpoint is still required.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import UnifiedDataSync from '@/lib/unifiedDataSync';
 import { authenticateRequest } from '@/lib/firebaseServerAuth';
+import { DataMigrationSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, options = {} } = body;
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
-      );
-    }
+    
+    // Validate request body with Zod
+    const validatedData = DataMigrationSchema.parse(body);
+    const { userId, options = {} } = validatedData;
 
     // Authenticate the request
     const auth = await authenticateRequest(request, body);
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Starting data migration for user ${userId}`);
-    
+
     const result = await UnifiedDataSync.migrateUserDataToMoments(userId, {
       batchSize: options.batchSize || 50,
       includeVectorIndexing: options.includeVectorIndexing !== false,

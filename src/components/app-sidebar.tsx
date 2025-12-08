@@ -76,7 +76,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { title: "Home", href: "/dashboard", icon: House },
   { title: "Log", href: "/dashboard/log", icon: Plus },
-  { title: "Moments", href: "/dashboard/journal", icon: GalleryHorizontalEnd },
+  { title: "Moments", href: "/dashboard/moments", icon: GalleryHorizontalEnd },
   { title: "Soulspace", href: "/dashboard/soulspace", icon: GeminiSparkle },
 ]
 
