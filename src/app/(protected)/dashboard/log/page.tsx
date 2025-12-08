@@ -524,12 +524,13 @@ export default function JournalPage() {
       </header>
 
       {/* ===================================================================
-          CONTENT AREA
+          CONTENT AREA with proper flexbox layout
           =================================================================== */}
-      <main className="flex-1 relative overflow-hidden">
-        {/* Text Mode */}
-        {journal.mode === "text" && (
-          <div className="h-full overflow-y-auto">
+      <main className="flex-1 flex flex-col relative min-h-0">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Text Mode */}
+          {journal.mode === "text" && (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 sm:pb-48">
               <BlockEditor
                 value={journal.content}
@@ -545,12 +546,10 @@ export default function JournalPage() {
                 }}
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Video Mode - Contained Layout */}
-        {journal.mode === "video" && (
-          <div className="h-full overflow-y-auto">
+          {/* Video Mode - Contained Layout */}
+          {journal.mode === "video" && (
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 sm:pb-48">
               {/* Video recorder container */}
               <div className="aspect-video w-full max-w-3xl mx-auto rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800">
@@ -564,40 +563,44 @@ export default function JournalPage() {
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* ===================================================================
-            FLOATING ELEMENTS - Always visible
+            FLOATING AI CHAT BUTTON
             =================================================================== */}
-        {/* AI Chat Button */}
         {!isChatOpen && (
-          <div className="absolute bottom-24 sm:bottom-6 right-4 sm:right-6 z-40">
+          <div className="absolute bottom-[5.5rem] sm:bottom-6 right-4 sm:right-6 z-40 pointer-events-auto">
             <Button03 onToggleChat={() => setIsChatOpen(true)} />
           </div>
         )}
 
-        {/* Bottom Toolbar */}
-        <div className="absolute bottom-0 left-0 right-0 z-30 pointer-events-none">
+        {/* ===================================================================
+            BOTTOM TOOLBAR - Fixed to bottom using flexbox
+            =================================================================== */}
+        <div className="flex-shrink-0 relative z-30">
           {/* Gradient backdrop for better readability over content */}
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-zinc-50 via-zinc-50/90 to-transparent dark:from-[#191919] dark:via-[#191919]/90 pointer-events-none" />
-
-          <div className="relative p-3 sm:p-4 max-w-7xl mx-auto pb-6 sm:pb-4">
-            {/* Actionbar */}
-            <div className="flex justify-center pointer-events-auto">
-              <Actionbar
-                selectedMode={journal.mode === "text" ? "Type" : "Video"}
-                onModeChange={handleModeChange}
-                onToolbarClick={() => { }}
-                onImageAttach={handleImageAttach}
-                onAudioRecorded={handleAudioRecorded}
-                onEmotionLogged={handleEmotionLogged}
-                alwaysShowAllButtons={true}
-                onPromptClick={() => blockEditorRef.current?.addReflection()}
-                isReflectionsCollapsed={areReflectionsCollapsed}
-                onToggleReflectionsCollapse={() => blockEditorRef.current?.toggleCollapseAll()}
-                hasReflections={hasReflections}
-              />
+          <div className="absolute inset-x-0 top-[-2rem] h-8 bg-gradient-to-t from-zinc-50 via-zinc-50/90 to-transparent dark:from-[#191919] dark:via-[#191919]/90 pointer-events-none" />
+          
+          {/* Toolbar Container with iOS Safe Area support */}
+          <div className="bg-zinc-50/80 dark:bg-[#191919]/80 backdrop-blur-sm border-t border-neutral-200/50 dark:border-neutral-800/50">
+            <div className="p-3 sm:p-4 max-w-7xl mx-auto pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {/* Actionbar */}
+              <div className="flex justify-center">
+                <Actionbar
+                  selectedMode={journal.mode === "text" ? "Type" : "Video"}
+                  onModeChange={handleModeChange}
+                  onToolbarClick={() => { }}
+                  onImageAttach={handleImageAttach}
+                  onAudioRecorded={handleAudioRecorded}
+                  onEmotionLogged={handleEmotionLogged}
+                  alwaysShowAllButtons={true}
+                  onPromptClick={() => blockEditorRef.current?.addReflection()}
+                  isReflectionsCollapsed={areReflectionsCollapsed}
+                  onToggleReflectionsCollapse={() => blockEditorRef.current?.toggleCollapseAll()}
+                  hasReflections={hasReflections}
+                />
+              </div>
             </div>
           </div>
         </div>
