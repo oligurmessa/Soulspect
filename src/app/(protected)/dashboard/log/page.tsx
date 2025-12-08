@@ -92,7 +92,7 @@ export default function JournalPage() {
     isEditing,
     resetJournal,
   } = useJournalState()
-  
+
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [hasReflections, setHasReflections] = useState(false)
   const [areReflectionsCollapsed, setAreReflectionsCollapsed] = useState(false)
@@ -374,7 +374,7 @@ export default function JournalPage() {
 
   if (meta.loadingState === "loading") {
     return (
-      <div className="flex flex-col h-full bg-zinc-50 dark:bg-[#191919]">
+      <div className="flex flex-col h-dvh bg-zinc-50 dark:bg-[#191919]">
         <div className="flex-shrink-0 px-4 sm:px-8 py-6 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between max-w-5xl mx-auto">
             <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded-lg animate-pulse" />
@@ -396,7 +396,7 @@ export default function JournalPage() {
 
   if (meta.loadingState === "error") {
     return (
-      <div className="flex flex-col h-full bg-zinc-50 dark:bg-[#191919]">
+      <div className="flex flex-col h-dvh bg-zinc-50 dark:bg-[#191919]">
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center max-w-sm">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
@@ -425,7 +425,7 @@ export default function JournalPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="relative flex flex-col h-full bg-zinc-50 dark:bg-[#191919]">
+    <div className="relative flex flex-col h-dvh overflow-hidden bg-zinc-50 dark:bg-[#191919]">
       {/* ===================================================================
           HEADER - Clean navigation and actions
           =================================================================== */}
@@ -512,7 +512,7 @@ export default function JournalPage() {
                 }}
               />
 
-              <SaveButton 
+              <SaveButton
                 isEditing={isEditing}
                 meta={meta}
                 hasMeaningfulContent={hasMeaningfulContent}
